@@ -1,4 +1,5 @@
 import pygame
+from levels.level2 import run_level2
 
 pygame.init()
 
@@ -9,15 +10,9 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Space Jet Adventure - ECLIPSE")
 
 clock = pygame.time.Clock()
-running = True
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    screen.fill((5, 5, 30))
-    pygame.display.flip()
-    clock.tick(60)
+result = run_level2(screen, clock)
 
 pygame.quit()
+
+

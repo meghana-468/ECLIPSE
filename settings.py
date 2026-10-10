@@ -1,0 +1,12 @@
+WIDTH = 1000
+HEIGHT = 600
+FPS = 60
+
+BLACK = (5, 5, 30)
+WHITE = (255, 255, 255)
+BLUE = (50, 150, 255)
+RED = (255, 60, 60)
+GREEN = (60, 220, 100)
+
+GAME_TITLE = "Space Jet Adventure - ECLIPSE"
+TOTAL_LIVES = 3

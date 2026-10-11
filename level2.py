@@ -58,6 +58,11 @@ class Level2:
         self.player_y = self.HEIGHT * 0.78
         self.player_speed = 235.0
         self.player_health = 100.0
+        self.oxygen = 100.0
+        self.oxygen_tanks_collected = 0
+        self.required_oxygen_tanks = 3
+        self.ship_parts_collected = 0
+        self.required_ship_parts = 4
         self.damage_cooldown = 0.0
         self.hit_flash = 0.0
         self.walk_time = 0.0
@@ -74,7 +79,31 @@ class Level2:
         self.shake = 0.0
         self.state = "playing"
         self.paused = False
-        self.message_timer = 3.5
+        self.message_timer = 4.5
+        # Collectibles are spread across the whole playable Moon surface.
+        # There are more oxygen tanks than the minimum needed for the objective.
+        self.collectibles = []
+        self._create_collectibles()
+
+    def _create_collectibles(self):
+        positions = [
+            (105, 580), (260, 625), (430, 555), (585, 630), (760, 570),
+            (925, 620), (1010, 555), (170, 500), (690, 500),
+        ]
+        # Five oxygen tanks and four ship parts, distributed across the terrain.
+        oxygen_positions = positions[:5]
+        part_positions = positions[5:9]
+        for index, (x, y) in enumerate(oxygen_positions):
+            self.collectibles.append({
+                "kind": "oxygen", "x": float(x), "y": float(y),
+                "collected": False, "phase": index * 1.4,
+            })
+        for index, (x, y) in enumerate(part_positions):
+            self.collectibles.append({
+                "kind": "part", "x": float(x), "y": float(y),
+                "collected": False, "phase": index * 1.1 + 0.6,
+                "part_type": ("engine", "wing", "core", "antenna")[index],
+            })
 
     # Level interface: the parent game loop should pass each event here.
     def handle_event(self, event):
@@ -91,7 +120,7 @@ class Level2:
                     self.on_exit()
             elif event.key == pygame.K_p and self.state == "playing":
                 self.paused = not self.paused
-            elif event.key == pygame.K_r and self.state == "game_over":
+            elif event.key == pygame.K_r and self.state in ("game_over", "complete"):
                 self.reset_game()
             elif event.key == pygame.K_SPACE and self.state == "playing" and not self.paused:
                 self.fire_at_nearest()
@@ -127,6 +156,9 @@ class Level2:
         self.shake = max(0.0, self.shake - dt * 18.0)
         self.message_timer = max(0.0, self.message_timer - dt)
 
+        # Oxygen slowly drains while the astronaut explores the Moon.
+        self.oxygen = max(0.0, self.oxygen - 0.55 * dt)
+
         keys = pygame.key.get_pressed()
         dx = float(keys[pygame.K_d] or keys[pygame.K_RIGHT]) - float(
             keys[pygame.K_a] or keys[pygame.K_LEFT]
@@ -146,14 +178,36 @@ class Level2:
         self.player_x = max(34, min(self.WIDTH - 34, self.player_x))
         self.player_y = max(465, min(650, self.player_y))
 
+        self._update_collectibles()
         self._update_spawning(dt)
         self._update_aliens(dt)
         self._update_bullets(dt)
         self._update_particles(dt)
 
-        if self.player_health <= 0:
-            self.player_health = 0
+        if self.player_health <= 0 or self.oxygen <= 0:
+            self.player_health = max(0.0, self.player_health)
+            self.oxygen = max(0.0, self.oxygen)
             self.state = "game_over"
+        elif (self.ship_parts_collected >= self.required_ship_parts
+              and self.oxygen_tanks_collected >= self.required_oxygen_tanks):
+            self.state = "complete"
+            if self.on_complete:
+                self.on_complete()
+
+    def _update_collectibles(self):
+        for item in self.collectibles:
+            if item["collected"]:
+                continue
+            if math.hypot(item["x"] - self.player_x,
+                          item["y"] - self.player_y) < 34:
+                item["collected"] = True
+                if item["kind"] == "oxygen":
+                    self.oxygen_tanks_collected += 1
+                    self.oxygen = min(100.0, self.oxygen + 32.0)
+                    self._burst(item["x"], item["y"], (75, 220, 255), 14)
+                else:
+                    self.ship_parts_collected += 1
+                    self._burst(item["x"], item["y"], (255, 198, 91), 14)
 
     def _update_spawning(self, dt):
         self.spawn_timer -= dt
@@ -294,6 +348,7 @@ class Level2:
         surface = self.world
         self._draw_background(surface)
         self._draw_lunar_surface(surface)
+        self._draw_collectibles(surface)
 
         # Enemies and projectiles appear in front of the terrain.
         for alien in sorted(self.aliens, key=lambda a: a["y"]):
@@ -318,9 +373,16 @@ class Level2:
         if self.paused:
             self._draw_center_panel(surface, "MISSION PAUSED", "Press P to resume")
         elif self.state == "game_over":
+            reason = "OXYGEN DEPLETED" if self.oxygen <= 0 else "SUIT FAILURE"
             self._draw_center_panel(
-                surface, "SUIT FAILURE",
-                f"Aliens eliminated: {self.kills}   |   Press R to retry   |   ESC to exit"
+                surface, reason,
+                f"Parts {self.ship_parts_collected}/{self.required_ship_parts}  |  "
+                f"Oxygen tanks {self.oxygen_tanks_collected}/{self.required_oxygen_tanks}  |  Press R to retry"
+            )
+        elif self.state == "complete":
+            self._draw_center_panel(
+                surface, "REPAIR PARTS SECURED",
+                f"Mission objective complete!  Hostiles eliminated: {self.kills}  |  ESC to exit"
             )
         elif self.message_timer > 0:
             self._draw_mission_message(surface)
@@ -452,6 +514,39 @@ class Level2:
         if alien["flash"] > 0:
             pygame.draw.circle(surface, (230, 255, 255), (x, y), r + 5, 2)
 
+    def _draw_collectibles(self, surface):
+        for item in self.collectibles:
+            if item["collected"]:
+                continue
+            x, y = int(item["x"]), int(item["y"] + math.sin(self.elapsed * 2.4 + item["phase"]) * 3)
+            # A subtle pickup beacon makes objects readable against the grey ground.
+            if item["kind"] == "oxygen":
+                pygame.draw.circle(surface, (35, 104, 127), (x, y), 20, 1)
+                pygame.draw.ellipse(surface, (39, 151, 183), (x - 9, y - 14, 18, 28))
+                pygame.draw.rect(surface, (126, 234, 250), (x - 6, y - 17, 12, 5), border_radius=2)
+                pygame.draw.rect(surface, (16, 58, 78), (x - 5, y - 6, 10, 12), border_radius=2)
+                pygame.draw.line(surface, (180, 248, 255), (x - 4, y - 9), (x - 4, y + 3), 2)
+                label = self.font_small.render("O2", True, (163, 241, 255))
+            else:
+                pygame.draw.circle(surface, (129, 91, 42), (x, y), 21, 1)
+                part_type = item.get("part_type", "core")
+                if part_type == "engine":
+                    pygame.draw.rect(surface, (168, 176, 185), (x - 10, y - 10, 20, 20), border_radius=3)
+                    pygame.draw.rect(surface, (70, 92, 108), (x - 6, y - 6, 12, 12), border_radius=2)
+                    pygame.draw.circle(surface, (255, 174, 75), (x, y + 1), 4)
+                elif part_type == "wing":
+                    pygame.draw.polygon(surface, (188, 197, 204), [(x - 15, y + 7), (x - 5, y - 7), (x + 15, y - 11), (x + 8, y + 4)])
+                    pygame.draw.line(surface, (92, 117, 134), (x - 8, y + 4), (x + 10, y - 7), 2)
+                elif part_type == "core":
+                    pygame.draw.polygon(surface, (190, 201, 209), [(x, y - 13), (x + 12, y - 3), (x + 7, y + 12), (x - 7, y + 12), (x - 12, y - 3)])
+                    pygame.draw.circle(surface, (91, 222, 247), (x, y), 5)
+                else:
+                    pygame.draw.line(surface, (190, 201, 209), (x - 9, y + 11), (x + 7, y - 11), 4)
+                    pygame.draw.line(surface, (190, 201, 209), (x - 1, y + 3), (x + 12, y + 6), 3)
+                    pygame.draw.circle(surface, (255, 210, 112), (x + 7, y - 11), 4)
+                label = self.font_small.render("PART", True, (255, 220, 157))
+            surface.blit(label, label.get_rect(center=(x, y + 28)))
+
     def _draw_astronaut(self, surface):
         x, y = int(self.player_x), int(self.player_y)
         moving = pygame.key.get_pressed()
@@ -538,11 +633,30 @@ class Level2:
 
         kills_text = self.font_medium.render(f"HOSTILES  {self.kills:02d}", True, (133, 245, 180))
         surface.blit(kills_text, (875, 20))
-        objective = self.font_small.render("OBJECTIVE: SURVIVE THE ALIEN ATTACK", True, (218, 220, 226))
-        surface.blit(objective, (24, 94))
+        # Oxygen reserve bar.
+        oxygen_label = self.font_small.render("OXYGEN", True, (163, 229, 244))
+        surface.blit(oxygen_label, (530, 61))
+        oxy_x, oxy_y, oxy_w, oxy_h = 620, 63, 135, 9
+        pygame.draw.rect(surface, (34, 43, 55), (oxy_x, oxy_y, oxy_w, oxy_h), border_radius=4)
+        oxy_fill = int(oxy_w * self.oxygen / 100)
+        if oxy_fill > 0:
+            oxy_color = (67, 210, 241) if self.oxygen > 30 else (255, 105, 83)
+            pygame.draw.rect(surface, oxy_color, (oxy_x, oxy_y, oxy_fill, oxy_h), border_radius=4)
 
-        controls = self.font_small.render("MOVE  WASD/ARROWS     FIRE  CLICK / SPACE     PAUSE  P",
-                                          True, (151, 165, 180))
+        kills_text = self.font_medium.render(f"HOSTILES {self.kills:02d}", True, (133, 245, 180))
+        surface.blit(kills_text, (875, 20))
+        tanks_text = self.font_small.render(
+            f"O2 TANKS {self.oxygen_tanks_collected}/{self.required_oxygen_tanks}",
+            True, (145, 229, 246))
+        parts_text = self.font_small.render(
+            f"SHIP PARTS {self.ship_parts_collected}/{self.required_ship_parts}",
+            True, (255, 214, 141))
+        surface.blit(tanks_text, (875, 49))
+        surface.blit(parts_text, (24, 94))
+
+        controls = self.font_small.render(
+            "EXPLORE MOON  WASD/ARROWS   FIRE  CLICK/SPACE   PAUSE  P",
+            True, (151, 165, 180))
         surface.blit(controls, (self.WIDTH - controls.get_width() - 22, self.HEIGHT - 31))
 
         # A restrained targeting reticle around the nearest hostile.
@@ -558,7 +672,7 @@ class Level2:
             pygame.draw.line(surface, (110, 225, 255), (tx, ty + 15), (tx, ty + 22), 1)
 
     def _draw_mission_message(self, surface):
-        text = self.font_medium.render("CONTACT!  Hostiles approaching the landing zone.",
+        text = self.font_medium.render("SEARCH THE MOON: collect 4 ship parts + at least 3 O2 tanks.",
                                        True, (236, 226, 188))
         plate = pygame.Surface((text.get_width() + 28, 42), pygame.SRCALPHA)
         plate.fill((5, 10, 20, 190))

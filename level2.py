@@ -1,21 +1,51 @@
+
 import pygame
+import sys
 
-def run_level2(screen, clock):
-    """Level 2: Survive on the Moon and repair the jet."""
-    running = True
 
-    while running:
+class Level2:
+    def __init__(self, screen):
+        self.screen = screen
+        self.clock = pygame.time.Clock()
+
+        self.width = self.screen.get_width()
+        self.height = self.screen.get_height()
+
+        self.running = True
+
+    def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return "QUIT"
+                self.running = False
 
-        screen.fill((35, 35, 50))
+    def update(self, dt):
+        pass
 
-        font = pygame.font.Font(None, 38)
-        text = font.render("LEVEL 2: MOON SURVIVAL", True, (255, 255, 255))
-        screen.blit(text, (260, 270))
-
+    def draw(self):
+        self.screen.fill((5, 5, 25))
         pygame.display.flip()
-        clock.tick(60)
 
-    return "LEVEL_COMPLETE"
+    def run(self):
+        while self.running:
+            dt = self.clock.tick(60) / 1000
+
+            self.handle_events()
+            self.update(dt)
+            self.draw()
+
+
+def main():
+    pygame.init()
+
+    screen = pygame.display.set_mode((1100, 700))
+    pygame.display.set_caption("ECLIPSE - Level 2")
+
+    level = Level2(screen)
+    level.run()
+
+    pygame.quit()
+    sys.exit()
+
+
+if __name__ == "__main__":
+    main()

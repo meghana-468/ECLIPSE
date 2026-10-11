@@ -12,6 +12,16 @@ class Level2:
         self.height = self.screen.get_height()
 
         self.running = True
+        # Player position
+        self.player_x = self.width // 2
+        self.player_y = int(self.height * 0.75)
+
+        # Player movement speed
+        self.player_speed = 220
+
+        # Keyboard state
+        self.keys = set()
+
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -19,7 +29,28 @@ class Level2:
                 self.running = False
 
     def update(self, dt):
-        pass
+        keys = pygame.key.get_pressed()
+
+        # Horizontal movement
+        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+            self.player_x -= self.player_speed * dt
+
+        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+            self.player_x += self.player_speed * dt
+
+        # Vertical movement
+        if keys[pygame.K_w] or keys[pygame.K_UP]:
+            self.player_y -= self.player_speed * dt
+
+        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+            self.player_y += self.player_speed * dt
+
+        # Keep player within the screen
+        self.player_x = max(20, min(self.width - 20, self.player_x))
+        self.player_y = max(
+            int(self.height * 0.65),
+            min(self.height - 30, self.player_y)
+        )
 
     
     def draw(self):
@@ -107,23 +138,74 @@ class Level2:
         (930, 635, 11),
         ]
 
-        for x, y, radius in rocks:
-            pygame.draw.circle(
+        for x, y, size in rocks:
+            pygame.draw.ellipse(
             self.screen,
-            (65, 64, 61),
-            (x, y),
-            radius
-            )
-
-            pygame.draw.circle(
+            (40, 40, 39),
+            (x - size, y-size//3, size*2,size//2))
+            # Irregular rock outline 
+            points = [ (x - size, y), 
+                      (x - size * 0.8, y - size * 0.7), 
+                      (x - size * 0.3, y - size), 
+                      (x + size * 0.4, y - size * 0.8), 
+                      (x + size, y - size * 0.2), 
+                      (x + size * 0.7, y + size * 0.3), 
+                      (x - size * 0.5, y + size * 0.3), 
+                      ]
+            pygame.draw.polygon( self.screen, 
+                                (91, 90, 86), 
+                                points )
+            # Lit upper-left surface 
+            highlight = [ (x - size * 0.8, y - size * 0.7), 
+                        (x - size * 0.3, y - size), 
+                        (x + size * 0.1, y - size * 0.6), 
+                        (x - size * 0.2, y - size * 0.3), 
+                        ]
+            pygame.draw.polygon( 
+                           self.screen, 
+                            (132, 130, 124), 
+                            highlight )
+            #Dark side to suggest depth
+            dark_side = [ 
+                (x + size * 0.1, y - size * 0.6), 
+                (x + size, y - size * 0.2), 
+                (x + size * 0.7, y + size * 0.3), 
+                (x - size * 0.2, y - size * 0.3), 
+                ] 
+            pygame.draw.polygon( 
+                self.screen, (63, 63, 61), 
+                dark_side )
+                
+    # Draw astronaut body
+        pygame.draw.ellipse(
             self.screen,
-            (120, 117, 110),
-            (x - 3, y - 4),
-            radius // 2
-            )
+            (190, 192, 195),
+            (self.player_x - 10, self.player_y - 5, 20, 25)
+        )
 
+    # Draw helmet
+        pygame.draw.circle(
+            self.screen,
+            (210, 215, 220),
+            (int(self.player_x), int(self.player_y - 12)),
+            10
+        )
+
+    # Helmet visor
+        pygame.draw.ellipse(
+            self.screen,
+            (35, 85, 115),
+            (self.player_x - 7, self.player_y - 17, 14, 10)
+        )
+
+    # Backpack
+        pygame.draw.rect(
+            self.screen,
+            (115, 118, 123),
+            (self.player_x + 8, self.player_y, 7, 15)
+        )
     # 8. Display the frame
-            pygame.display.flip()
+        pygame.display.flip()
 
 
 

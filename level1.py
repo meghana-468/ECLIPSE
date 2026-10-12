@@ -2,15 +2,17 @@
 LEVEL 1 - EARTH TO MOON   (pygame version of the Panda3D level)
 Requires:  pip install pygame        (pygame 2.0 or newer)
 Run alone: python levels/level1_pygame.py
-Same flow and features as the Panda3D level:
-    menu (Start Game button) -> astronaut boards the ship -> countdown
-    3, 2, 1, LAUNCH! -> takeoff -> flight (stars, Earth behind, Moon ahead,
+Game flow:
+    menu -> astronaut boards the ship -> pilot waits inside the cockpit
+    -> player presses SPACE/ENTER or clicks LAUNCH -> countdown -> takeoff
+    -> flight (stars, Earth behind, Moon ahead,
     asteroids) -> approach to the Moon -> crash-landing on the Moon ->
     Level 1 ending screen with a hint about Level 2.
 
 Controls
     Arrow keys / WASD ... fly            P or ESC ... pause / resume
-    ENTER or SPACE ...... start / continue         R ... retry after a crash
+    ENTER or SPACE ...... start / launch / continue
+    Click LAUNCH ........ launch after boarding     R ... retry after a crash
 
 Everything is drawn in code (a 2D version of the capsule ship and the
 astronaut), so no image or sound files are needed.
@@ -190,7 +192,7 @@ def add_explosion(parts, x, y, r, big=False):
 # ======================================================================
 #  Artwork (all drawn with pygame primitives)
 # ======================================================================
-def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0):
+def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0, pilot=False):
     """Classic straight rocket ship, upright with nose at the top.
 
     (ox, oy) is the centre x and the bottom of the engine nozzle.
@@ -232,10 +234,24 @@ def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0):
     poly((240, 242, 248), [(-0.14, 1.2), (-0.14, 6.8),
                            (0.0, 7.7), (0.0, 1.2)])
 
-    # Dark cockpit window near the top.
+    # Cockpit window. Once the astronaut has boarded, show their helmet and
+    # shoulders INSIDE the glass (rather than standing beside the rocket).
     window = pygame.Rect(int(X(-0.31)), int(Y(6.35)),
                          max(3, int(0.62 * s)), max(3, int(1.05 * s)))
-    pygame.draw.ellipse(surf, (25, 75, 135), window)
+    pygame.draw.ellipse(surf, (16, 42, 82), window)
+    if pilot:
+        # Draw the suit/shoulders first, then the helmet and visor.
+        shoulders = pygame.Rect(0, 0, max(3, int(0.43 * s)), max(3, int(0.30 * s)))
+        shoulders.center = (int(X(0.0)), int(window.top + 0.88 * s))
+        pygame.draw.ellipse(surf, (225, 230, 241), shoulders)
+        pygame.draw.ellipse(surf, (150, 160, 180), shoulders, max(1, int(0.04 * s)))
+        helmet = pygame.Rect(0, 0, max(3, int(0.38 * s)), max(3, int(0.43 * s)))
+        helmet.center = (int(X(0.0)), int(window.top + 0.36 * s))
+        pygame.draw.ellipse(surf, (240, 242, 248), helmet)
+        visor = pygame.Rect(0, 0, max(2, int(0.25 * s)), max(2, int(0.20 * s)))
+        visor.center = (int(X(0.0)), int(window.top + 0.38 * s))
+        pygame.draw.ellipse(surf, (240, 188, 65), visor)
+        pygame.draw.ellipse(surf, (255, 232, 145), visor, max(1, int(0.035 * s)))
     pygame.draw.ellipse(surf, (115, 220, 255), window, max(1, int(0.08 * s)))
     pygame.draw.line(surf, (220, 248, 255),
                      ip(X(-0.16), Y(6.95)), ip(X(0.02), Y(6.55)),
@@ -501,9 +517,9 @@ class Level1:
     TAKEOFF_SECONDS = 6.5
     LANDING_DESCENT = 8.0
 
-    PAUSABLE = ("boarding", "countdown", "takeoff", "flight", "arrival", "landing")
-    SCENE_OF = {"menu": "launch", "boarding": "launch", "countdown": "launch",
-                "takeoff": "launch", "flight": "flight", "arrival": "flight",
+    PAUSABLE = ("boarding", "ready", "countdown", "takeoff", "flight", "arrival", "landing")
+    SCENE_OF = {"menu": "launch", "boarding": "launch", "ready": "launch",
+                "countdown": "launch", "takeoff": "launch", "flight": "flight", "arrival": "flight",
                 "crashed": "flight", "landing": "moon", "complete": "moon"}
 
     def __init__(self, screen, on_complete=None, on_exit=None):
@@ -538,6 +554,7 @@ class Level1:
         self.parts = Particles()
 
         self.start_btn = Button((W // 2 - 125, 178, 250, 56), "START GAME")
+        self.launch_btn = Button((W // 2 - 140, 178, 280, 56), "LAUNCH ROCKET")
         self.pause_btn = Button((W - 126, 14, 108, 38), "PAUSE")
         self.resume_btn = Button((W // 2 - 140, 300, 280, 52), "RESUME")
         self.restart_btn = Button((W // 2 - 140, 366, 280, 52), "RESTART LEVEL")
@@ -607,6 +624,12 @@ class Level1:
     def start_game(self):
         if self.state == "menu":
             self.set_state("boarding")
+
+    def launch_rocket(self):
+        """Begin the countdown only when the player requests launch."""
+        if self.state == "ready":
+            self.hatch = 1.0
+            self.set_state("countdown")
 
     def begin_flight(self, message):
         self.set_state("flight")
@@ -688,6 +711,8 @@ class Level1:
                     return
                 if self.state == "menu":
                     self.start_game()
+                elif self.state == "ready":
+                    self.launch_rocket()
                 elif self.state == "complete":
                     self.finish()
             elif event.key == pygame.K_r and not self.paused:
@@ -707,6 +732,8 @@ class Level1:
         st = self.state
         if st == "menu" and self.start_btn.hit(pos):
             self.start_game()
+        elif st == "ready" and self.launch_btn.hit(pos):
+            self.launch_rocket()
         elif st == "crashed":
             if self.retry_btn.hit(pos):
                 self.retry()
@@ -758,7 +785,9 @@ class Level1:
             self.hatch = ease_io(t_close / 0.9)
         if self.t >= walk_t + 0.5 + 0.9 + 0.4:
             self.hatch = 1.0
-            self.set_state("countdown")
+            self.astro_visible = False
+            self.set_state("ready")
+            self.say("Pilot secured. Press SPACE / ENTER or click LAUNCH ROCKET.", 12.0)
 
     def _update_takeoff(self, dt):
         self.rise = 1050.0 * ease_in(self.t / 6.0)
@@ -946,7 +975,8 @@ class Level1:
         flame = 0.0
         if st == "takeoff":
             flame = random.uniform(0.9, 1.3)
-        draw_ship(w, LAUNCH_SHIP_X, ny, LAUNCH_SCALE, flame, self.hatch)
+        draw_ship(w, LAUNCH_SHIP_X, ny, LAUNCH_SCALE, flame, self.hatch,
+                  pilot=(st in ("ready", "countdown", "takeoff")))
         if self.astro_visible and st in ("menu", "boarding"):
             draw_astronaut(w, self.astro_x, self.astro_y, 0.68 * self.astro_scale,
                            self.astro_phase, self.astro_face)
@@ -984,7 +1014,7 @@ class Level1:
                 sw, sh = int(6.4 * fs), int(21 * fs)
                 spr = pygame.Surface((sw, sh), pygame.SRCALPHA)
                 draw_ship(spr, sw / 2.0, sh / 2.0 + 5.0 * fs, fs,
-                          random.uniform(0.85, 1.25), 1.0)
+                          random.uniform(0.85, 1.25), 1.0, pilot=True)
                 tilt = -self.vel_x / self.SHIP_SPEED * 14.0
                 rot = pygame.transform.rotate(spr, tilt)
                 w.blit(rot, rot.get_rect(center=ip(self.ship_x, self.ship_y)))
@@ -995,14 +1025,14 @@ class Level1:
         if self.touched_down:
             # Draw the capsule tilted on its side to show the crash landing.
             ship_surface = pygame.Surface((340, 390), pygame.SRCALPHA)
-            draw_ship(ship_surface, 170, 330, LAUNCH_SCALE, 0.0, self.hatch)
+            draw_ship(ship_surface, 170, 330, LAUNCH_SCALE, 0.0, self.hatch, pilot=True)
             crashed_ship = pygame.transform.rotate(ship_surface, 68)
             w.blit(crashed_ship, crashed_ship.get_rect(
                 center=ip(LAND_X, GROUND_Y - 38)))
         else:
             draw_ship(w, LAND_X, self.land_y, LAUNCH_SCALE,
                       self.land_flame * random.uniform(0.9, 1.2)
-                      if self.land_flame > 0 else 0.0, self.hatch)
+                      if self.land_flame > 0 else 0.0, self.hatch, pilot=True)
 
         # The astronaut stays inside; Level 1 ends after the impact.
 
@@ -1017,13 +1047,19 @@ class Level1:
             draw_text(c, "MISSION: MOON", self.f_big, GOLD, (W // 2, 78))
             draw_text(c, "Level 1 - Earth to Moon", self.f_med, WHITE, (W // 2, 134))
             self.start_btn.draw(c, self.f_btn, mouse)
-            draw_text(c, "ENTER = start   |   WASD / arrows = fly   |   P or ESC = pause",
+            draw_text(c, "ENTER = start   |   Board the ship, then press SPACE to launch",
                       self.f_small, WHITE, (W // 2, H - 22))
             return
 
         self._draw_hud(c, mouse)
 
-        if st == "countdown":
+        if st == "ready":
+            draw_text(c, "ASTRONAUT SECURED INSIDE THE COCKPIT", self.f_med,
+                      GOLD, (W // 2, 120))
+            self.launch_btn.draw(c, self.f_btn, mouse)
+            draw_text(c, "Press SPACE or ENTER to begin the countdown",
+                      self.f_small, WHITE, (W // 2, 250))
+        elif st == "countdown":
             labels = ("3", "2", "1", "LAUNCH!")
             idx = min(3, int(self.t))
             pop = lerp(1.8, 1.0, ease_out((self.t - int(self.t)) / 0.45))

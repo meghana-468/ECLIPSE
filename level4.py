@@ -5,7 +5,7 @@ import pygame
 
 pygame.init()
 
-# ==================== SETTINGS ====================
+# ================= SETTINGS =================
 WIDTH, HEIGHT = 1000, 650
 WORLD_W, WORLD_H = 2200, 1800
 FPS = 60
@@ -19,16 +19,16 @@ SMALL = pygame.font.SysFont("consolas", 16)
 BIG = pygame.font.SysFont("consolas", 42, bold=True)
 
 WHITE = (245, 245, 255)
-BLACK = (10, 12, 28)
-ORANGE = (220, 100, 50)
+BLACK = (8, 10, 28)
+ORANGE = (240, 115, 45)
 RED = (245, 55, 65)
 GREEN = (60, 230, 130)
-BLUE = (65, 170, 255)
 YELLOW = (255, 220, 65)
 PURPLE = (175, 85, 240)
 CYAN = (90, 230, 255)
+BLUE = (55, 135, 245)
 
-# ==================== WORLD ====================
+# ================= WORLD DECORATION =================
 random.seed(12)
 
 rocks = [
@@ -43,10 +43,11 @@ rocks = [
 
 stars = [
     (random.randrange(WIDTH), random.randrange(HEIGHT))
-    for _ in range(150)
+    for _ in range(180)
 ]
 
 
+# ================= DRAWING HELPERS =================
 def draw_text(text, x, y, color=WHITE, font=FONT):
     image = font.render(str(text), True, color)
     screen.blit(image, (x, y))
@@ -54,7 +55,10 @@ def draw_text(text, x, y, color=WHITE, font=FONT):
 
 def centered_text(text, y, color=WHITE, font=BIG):
     image = font.render(text, True, color)
-    screen.blit(image, (WIDTH // 2 - image.get_width() // 2, y))
+    screen.blit(
+        image,
+        (WIDTH // 2 - image.get_width() // 2, y)
+    )
 
 
 def health_bar(x, y, width, height, value, maximum, color):
@@ -70,56 +74,103 @@ def health_bar(x, y, width, height, value, maximum, color):
     pygame.draw.rect(screen, WHITE, (x, y, width, height), 1)
 
 
-def draw_astronaut(x, y):
+def to_screen(position, camera):
+    return (
+        int(position.x - camera.x),
+        int(position.y - camera.y)
+    )
+
+
+# ================= ASTRONAUT =================
+def draw_astronaut(x, y, direction):
+    # Draw the astronaut facing UP first, then rotate the sprite.
+    sprite = pygame.Surface((64, 64), pygame.SRCALPHA)
+
     # Backpack
-    pygame.draw.rect(screen, (70, 125, 165), (x - 16, y - 5, 9, 24))
+    pygame.draw.rect(
+        sprite, (70, 125, 165),
+        (17, 24, 9, 24), border_radius=3
+    )
 
     # Legs
-    pygame.draw.line(screen, WHITE, (x - 5, y + 13), (x - 9, y + 25), 6)
-    pygame.draw.line(screen, WHITE, (x + 5, y + 13), (x + 9, y + 25), 6)
+    pygame.draw.line(
+        sprite, WHITE, (27, 43), (23, 54), 6
+    )
+    pygame.draw.line(
+        sprite, WHITE, (37, 43), (41, 54), 6
+    )
 
     # Body
     pygame.draw.rect(
-        screen, (220, 230, 240),
-        (x - 11, y - 5, 22, 22), border_radius=5
+        sprite, (220, 230, 240),
+        (21, 25, 22, 22), border_radius=5
     )
 
     # Helmet and visor
-    pygame.draw.circle(screen, WHITE, (x, y - 12), 13)
-    pygame.draw.circle(screen, (35, 100, 155), (x + 2, y - 12), 8)
+    pygame.draw.circle(sprite, WHITE, (32, 17), 13)
+    pygame.draw.circle(sprite, (35, 100, 155), (34, 17), 8)
 
     # Suit light
-    pygame.draw.circle(screen, CYAN, (x - 4, y + 4), 3)
+    pygame.draw.circle(sprite, CYAN, (27, 34), 3)
+
+    # Base sprite faces up.
+    if direction.x > 0.5:
+        angle = -90
+    elif direction.x < -0.5:
+        angle = 90
+    elif direction.y > 0.5:
+        angle = 180
+    else:
+        angle = 0
+
+    rotated = pygame.transform.rotate(sprite, angle)
+    rect = rotated.get_rect(center=(int(x), int(y)))
+    screen.blit(rotated, rect)
 
 
-def draw_spaceship(x, y, scale=1.0):
-    def p(px, py):
-        return int(x + px * scale), int(y + py * scale)
+# ================= SPACESHIP =================
+def draw_spaceship(x, y, angle=0, scale=1.0):
+    sprite = pygame.Surface((100, 120), pygame.SRCALPHA)
 
+    # Ship faces UP by default.
     pygame.draw.polygon(
-        screen, (165, 190, 220),
-        [p(0, -38), p(27, 10), p(18, 30),
-         p(-18, 30), p(-27, 10)]
+        sprite, (165, 190, 220),
+        [(50, 8), (75, 64), (68, 91), (32, 91), (25, 64)]
     )
 
     pygame.draw.polygon(
-        screen, (85, 125, 180),
-        [p(-17, 5), p(-43, 27), p(-20, 24)]
+        sprite, (85, 125, 180),
+        [(31, 57), (7, 88), (33, 81)]
     )
 
     pygame.draw.polygon(
-        screen, (85, 125, 180),
-        [p(17, 5), p(43, 27), p(20, 24)]
+        sprite, (85, 125, 180),
+        [(69, 57), (93, 88), (67, 81)]
     )
 
-    pygame.draw.circle(screen, CYAN, p(0, -12), max(3, int(9 * scale)))
-
+    pygame.draw.circle(sprite, CYAN, (50, 42), 11)
     pygame.draw.polygon(
-        screen, ORANGE,
-        [p(-10, 28), p(0, 46), p(10, 28)]
+        sprite, ORANGE,
+        [(39, 90), (50, 112), (61, 90)]
+    )
+    pygame.draw.polygon(
+        sprite, YELLOW,
+        [(45, 91), (50, 104), (55, 91)]
     )
 
+    # Rotate ship to aim in the requested direction.
+    rotated = pygame.transform.rotate(sprite, angle)
+    new_size = (
+        max(1, int(rotated.get_width() * scale)),
+        max(1, int(rotated.get_height() * scale))
+    )
+    rotated = pygame.transform.smoothscale(rotated, new_size)
 
+    rect = rotated.get_rect(center=(int(x), int(y)))
+    screen.blit(rotated, rect)
+
+
+# ================= ALIENS =================
 def draw_alien(x, y):
     pygame.draw.line(
         screen, PURPLE, (x - 8, y + 10), (x - 13, y + 20), 5
@@ -142,7 +193,9 @@ def draw_alien(x, y):
 def draw_treasure(x, y):
     pulse = int(2 * math.sin(pygame.time.get_ticks() / 180))
 
-    pygame.draw.circle(screen, YELLOW, (x, y), 25 + pulse, 2)
+    pygame.draw.circle(
+        screen, YELLOW, (x, y), 25 + pulse, 2
+    )
     pygame.draw.rect(
         screen, (130, 75, 20), (x - 18, y - 4, 36, 24)
     )
@@ -152,24 +205,36 @@ def draw_treasure(x, y):
     pygame.draw.rect(screen, WHITE, (x - 3, y - 3, 6, 14))
 
 
-def to_screen(pos, camera):
-    return int(pos.x - camera.x), int(pos.y - camera.y)
+# ================= EARTH =================
+def draw_earth(x, y, radius):
+    pygame.draw.circle(screen, (30, 95, 205), (x, y), radius)
+
+    pygame.draw.ellipse(
+        screen, (55, 180, 100),
+        (x - radius // 2, y - radius // 2,
+         max(1, radius), max(1, radius // 2))
+    )
+    pygame.draw.ellipse(
+        screen, (55, 180, 100),
+        (x, y, max(1, radius // 2), max(1, radius // 2))
+    )
+    pygame.draw.circle(screen, CYAN, (x, y), radius, 3)
 
 
-# ==================== GAME RESET ====================
+# ================= RESET GAME =================
 def reset_game():
     global player, ship_position, treasure_position
     global aliens, bullets, astronaut_health, ship_health
     global treasure_found, phase, last_direction
     global damage_timer, message, message_timer
     global flight_progress, flight_aliens, flight_bullets
-    global flight_spawn_timer, flight_damage_timer, ship_y
+    global flight_spawn_timer, flight_damage_timer
+    global ship_y, ship_aim, waves_spawned, landing_timer
 
     ship_position = pygame.Vector2(350, 900)
     player = pygame.Vector2(440, 900)
     last_direction = pygame.Vector2(1, 0)
 
-    # The treasure is hidden until the astronaut approaches.
     treasure_position = pygame.Vector2(1660, 430)
 
     locations = [
@@ -192,8 +257,8 @@ def reset_game():
     ship_health = 100
     treasure_found = False
     phase = "explore"
-    damage_timer = 0
 
+    damage_timer = 0
     message = "Explore Mars and find the hidden treasure!"
     message_timer = 4
 
@@ -202,14 +267,17 @@ def reset_game():
     flight_bullets = []
     flight_spawn_timer = 0
     flight_damage_timer = 0
+
     ship_y = HEIGHT // 2
+    ship_aim = pygame.Vector2(1, 0)
+    waves_spawned = 0
+    landing_timer = 0
 
 
-# ==================== MARS WORLD ====================
+# ================= MARS WORLD =================
 def draw_mars(camera):
     screen.fill((145, 62, 43))
 
-    # Ground texture
     for x in range(-50, WIDTH + 50, 100):
         for y in range(-50, HEIGHT + 50, 90):
             pygame.draw.circle(
@@ -217,7 +285,7 @@ def draw_mars(camera):
                 (x + ((y // 90) % 2) * 35, y), 22, 1
             )
 
-    # Stable rocks
+    # Stable rock decoration
     for rock in rocks:
         sx = int(rock["x"] - camera.x)
         sy = int(rock["y"] - camera.y)
@@ -229,13 +297,14 @@ def draw_mars(camera):
                 (sx, sy), rock["r"]
             )
 
-    # Parked spaceship
+    # Parked ship
     sx, sy = to_screen(ship_position, camera)
-    draw_spaceship(sx, sy, 1.15)
-    draw_text("YOUR SPACESHIP", sx - 80, sy + 55, CYAN, SMALL)
+    draw_spaceship(sx, sy, 0, 0.85)
+    draw_text("YOUR SPACESHIP", sx - 80, sy + 65, CYAN, SMALL)
 
-    # Treasure is completely hidden until nearby.
+    # Treasure is invisible until the astronaut is nearby.
     distance = player.distance_to(treasure_position)
+
     if not treasure_found and distance < 75:
         tx, ty = to_screen(treasure_position, camera)
         draw_treasure(tx, ty)
@@ -247,18 +316,20 @@ def draw_mars(camera):
 
         if -50 < ax < WIDTH + 50 and -50 < ay < HEIGHT + 50:
             draw_alien(ax, ay)
-            health_bar(ax - 15, ay - 29, 30, 4, alien["health"], 2, RED)
+            health_bar(
+                ax - 15, ay - 29, 30, 4,
+                alien["health"], 2, RED
+            )
 
-    # Astronaut's bullets
+    # Astronaut bullets
     for bullet in bullets:
         bx, by = to_screen(bullet["pos"], camera)
         pygame.draw.circle(screen, CYAN, (bx, by), 5)
 
-    # Astronaut
+    # Astronaut faces the last movement/aim direction.
     px, py = to_screen(player, camera)
-    draw_astronaut(px, py)
+    draw_astronaut(px, py, last_direction)
 
-    # HUD
     draw_text("SPACE JET ADVENTURE", 20, 15, YELLOW)
     draw_text("ASTRONAUT HEALTH", 20, 49, WHITE, SMALL)
     health_bar(195, 50, 180, 17, astronaut_health, 100, GREEN)
@@ -280,27 +351,12 @@ def draw_mars(camera):
         draw_text("TREASURE COLLECTED!", 20, 80, YELLOW, SMALL)
         draw_text("RETURN TO YOUR SPACESHIP", 20, 103, CYAN, SMALL)
 
-    draw_text("WASD/ARROWS: MOVE", 20, HEIGHT - 70, WHITE, SMALL)
-    draw_text("SPACE: SHOOT", 20, HEIGHT - 48, WHITE, SMALL)
+    draw_text("WASD/ARROWS: MOVE AND AIM", 20, HEIGHT - 70, WHITE, SMALL)
+    draw_text("SPACE: SHOOT IN FACING DIRECTION", 20, HEIGHT - 48, WHITE, SMALL)
     draw_text("E: ENTER SHIP", 20, HEIGHT - 26, WHITE, SMALL)
 
 
-# ==================== EARTH FLIGHT ====================
-def draw_earth(x, y, radius):
-    pygame.draw.circle(screen, (30, 95, 205), (x, y), radius)
-
-    pygame.draw.ellipse(
-        screen, (55, 180, 100),
-        (x - radius // 2, y - radius // 2,
-         radius, radius // 2)
-    )
-    pygame.draw.ellipse(
-        screen, (55, 180, 100),
-        (x, y, radius // 2, radius // 2)
-    )
-    pygame.draw.circle(screen, CYAN, (x, y), radius, 3)
-
-
+# ================= FLIGHT SCREEN =================
 def draw_flight():
     screen.fill((5, 8, 30))
 
@@ -312,7 +368,9 @@ def draw_flight():
     radius = min(int(35 + flight_progress * 1.15), 145)
     draw_earth(850, 310, radius)
 
-    draw_spaceship(175, int(ship_y), 1.25)
+    # Angle for spaceship sprite: faces right when aiming right.
+    angle = math.degrees(math.atan2(-ship_aim.y, ship_aim.x))
+    draw_spaceship(175, int(ship_y), angle, 0.85)
 
     for alien in flight_aliens:
         draw_alien(int(alien["pos"].x), int(alien["pos"].y))
@@ -330,17 +388,58 @@ def draw_flight():
     )
     health_bar(20, 78, 210, 18, ship_health, 100, GREEN)
     draw_text("SPACESHIP HEALTH", 240, 78, WHITE, SMALL)
-    draw_text("UP/DOWN: DODGE", 20, HEIGHT - 48, WHITE, SMALL)
-    draw_text("SPACE: SHOOT ALIENS", 20, HEIGHT - 26, WHITE, SMALL)
+    draw_text("W/S: DODGE UP/DOWN", 20, HEIGHT - 70, WHITE, SMALL)
+    draw_text("ARROWS: AIM", 20, HEIGHT - 48, WHITE, SMALL)
+    draw_text("SPACE: FIRE", 20, HEIGHT - 26, WHITE, SMALL)
 
 
-# ==================== MAIN GAME LOOP ====================
+# ================= EARTH LANDING =================
+def draw_landing():
+    screen.fill((5, 10, 35))
+
+    for sx, sy in stars:
+        pygame.draw.circle(screen, WHITE, (sx, sy), 1)
+
+    # Earth fills more of the screen as the ship approaches.
+    radius = min(180 + int(landing_timer * 95), 330)
+    earth_x = WIDTH // 2
+    earth_y = HEIGHT + radius - 50
+
+    draw_earth(earth_x, earth_y, radius)
+
+    # Landing platform on Earth
+    pygame.draw.ellipse(
+        screen, (180, 205, 225),
+        (WIDTH // 2 - 115, HEIGHT - 105, 230, 24)
+    )
+    pygame.draw.ellipse(
+        screen, CYAN,
+        (WIDTH // 2 - 115, HEIGHT - 105, 230, 24), 2
+    )
+
+    # Ship gradually descends toward the landing platform.
+    start_y = 125
+    target_y = HEIGHT - 155
+    ship_y_now = int(start_y + (target_y - start_y) * min(landing_timer / 3.5, 1))
+
+    scale = 0.9 + min(landing_timer / 3.5, 1) * 0.25
+    draw_spaceship(WIDTH // 2, ship_y_now, 0, scale)
+
+    draw_text("EARTH APPROACH", 20, 15, YELLOW)
+    draw_text("Landing sequence initiated...", 20, 50, WHITE, SMALL)
+
+    if landing_timer > 3.5:
+        draw_text("TOUCHDOWN!", WIDTH // 2 - 65, HEIGHT - 135, GREEN)
+
+
+# ================= MAIN LOOP =================
 def main():
     global player, aliens, bullets, astronaut_health
     global ship_health, treasure_found, phase, last_direction
     global damage_timer, message, message_timer
     global flight_progress, flight_aliens, flight_bullets
-    global flight_spawn_timer, flight_damage_timer, ship_y
+    global flight_spawn_timer, flight_damage_timer
+    global ship_y, ship_aim, waves_spawned, landing_timer
 
     reset_game()
     running = True
@@ -359,21 +458,23 @@ def main():
                 if event.key == pygame.K_r and phase in ("won", "lost"):
                     reset_game()
 
-                if event.key == pygame.K_SPACE:
-                    if phase == "explore":
-                        bullets.append({
-                            "pos": player.copy(),
-                            "vel": last_direction * 520,
-                            "life": 1.2
-                        })
+                # Astronaut shoots in the direction he is facing.
+                if event.key == pygame.K_SPACE and phase == "explore":
+                    bullets.append({
+                        "pos": player.copy(),
+                        "vel": last_direction * 520,
+                        "life": 1.2
+                    })
 
-                    elif phase == "flight":
-                        flight_bullets.append({
-                            "pos": pygame.Vector2(210, ship_y),
-                            "vel": pygame.Vector2(650, 0),
-                            "life": 1.5
-                        })
+                # Spaceship fires in the direction of its aim.
+                if event.key == pygame.K_SPACE and phase == "flight":
+                    flight_bullets.append({
+                        "pos": pygame.Vector2(175, ship_y),
+                        "vel": ship_aim * 650,
+                        "life": 1.5
+                    })
 
+                # Enter ship only after finding the treasure.
                 if event.key == pygame.K_e and phase == "explore":
                     if player.distance_to(ship_position) < 90:
                         if treasure_found:
@@ -381,16 +482,18 @@ def main():
                             flight_progress = 0
                             flight_aliens.clear()
                             flight_bullets.clear()
-                            flight_spawn_timer = 0
+                            flight_spawn_timer = 0.5
                             flight_damage_timer = 0
                             ship_y = HEIGHT // 2
+                            ship_aim = pygame.Vector2(1, 0)
+                            waves_spawned = 0
                         else:
                             message = "Find the treasure before returning!"
                             message_timer = 2.5
 
         keys = pygame.key.get_pressed()
 
-        # ---------- EXPLORE MARS ----------
+        # ================= EXPLORE MARS =================
         if phase == "explore":
             movement = pygame.Vector2(0, 0)
 
@@ -405,13 +508,12 @@ def main():
 
             if movement.length_squared() > 0:
                 movement = movement.normalize()
-                last_direction = movement.copy()
                 player += movement * 230 * dt
+                last_direction = movement.copy()
 
             player.x = max(30, min(WORLD_W - 30, player.x))
             player.y = max(30, min(WORLD_H - 30, player.y))
 
-            # Find treasure
             if (
                 not treasure_found
                 and player.distance_to(treasure_position) < 42
@@ -420,7 +522,7 @@ def main():
                 message = "TREASURE FOUND! RETURN TO YOUR SHIP!"
                 message_timer = 4
 
-            # Aliens chase and attack
+            # Aliens pursue and attack the astronaut.
             for alien in aliens[:]:
                 direction = player - alien["pos"]
                 distance = direction.length()
@@ -434,7 +536,7 @@ def main():
                     message = "ALIEN ATTACK! KEEP MOVING!"
                     message_timer = 1.2
 
-                # Shooting aliens
+                # Check projectile collision.
                 for bullet in bullets[:]:
                     if bullet["pos"].distance_to(alien["pos"]) < 27:
                         alien["health"] -= 1
@@ -449,7 +551,7 @@ def main():
                 bullet["pos"] += bullet["vel"] * dt
                 bullet["life"] -= dt
 
-                if bullet["life"] <= 0:
+                if bullet["life"] <= 0 and bullet in bullets:
                     bullets.remove(bullet)
 
             damage_timer = max(0, damage_timer - dt)
@@ -475,42 +577,63 @@ def main():
                     (WIDTH // 2 - image.get_width() // 2, 145)
                 )
 
-        # ---------- FLY BACK TO EARTH ----------
+        # ================= SPACE FLIGHT =================
         elif phase == "flight":
-            flight_progress += 8 * dt
+            # WASD moves/dodges. Arrow keys aim.
+            if keys[pygame.K_w]:
+                ship_y -= 240 * dt
+            if keys[pygame.K_s]:
+                ship_y += 240 * dt
+
+            if keys[pygame.K_UP]:
+                ship_aim = pygame.Vector2(0, -1)
+            elif keys[pygame.K_DOWN]:
+                ship_aim = pygame.Vector2(0, 1)
+            elif keys[pygame.K_LEFT]:
+                ship_aim = pygame.Vector2(-1, 0)
+            elif keys[pygame.K_RIGHT]:
+                ship_aim = pygame.Vector2(1, 0)
+
+            ship_y = max(60, min(HEIGHT - 60, ship_y))
+
             flight_spawn_timer -= dt
 
-            if keys[pygame.K_w] or keys[pygame.K_UP]:
-                ship_y -= 260 * dt
-            if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-                ship_y += 260 * dt
+            # Spawn three waves of alien hurdles.
+            if (
+                waves_spawned < 3
+                and flight_spawn_timer <= 0
+                and flight_progress < 85
+            ):
+                for _ in range(3):
+                    flight_aliens.append({
+                        "pos": pygame.Vector2(
+                            WIDTH + random.randint(20, 180),
+                            random.randint(80, HEIGHT - 80)
+                        ),
+                        "health": 2,
+                        "speed": random.randint(120, 180)
+                    })
 
-            ship_y = max(55, min(HEIGHT - 55, ship_y))
+                waves_spawned += 1
+                flight_spawn_timer = 2.7
 
-            if flight_spawn_timer <= 0:
-                flight_aliens.append({
-                    "pos": pygame.Vector2(
-                        WIDTH + 30, random.randint(70, HEIGHT - 70)
-                    ),
-                    "health": 2,
-                    "speed": random.randint(130, 205)
-                })
-                flight_spawn_timer = random.uniform(0.65, 1.2)
-
+            # Aliens approach the ship.
             for alien in flight_aliens[:]:
-                direction = pygame.Vector2(175, ship_y) - alien["pos"]
+                target = pygame.Vector2(175, ship_y)
+                direction = target - alien["pos"]
 
                 if direction.length_squared() > 1:
-                    alien["pos"] += direction.normalize() * alien["speed"] * dt
+                    alien["pos"] += (
+                        direction.normalize() * alien["speed"] * dt
+                    )
 
-                if alien["pos"].distance_to(
-                    pygame.Vector2(175, ship_y)
-                ) < 48:
+                if alien["pos"].distance_to(target) < 48:
                     if flight_damage_timer <= 0:
                         ship_health -= 10
                         flight_damage_timer = 0.65
 
-                    flight_aliens.remove(alien)
+                    if alien in flight_aliens:
+                        flight_aliens.remove(alien)
                     continue
 
                 for bullet in flight_bullets[:]:
@@ -521,54 +644,3 @@ def main():
 
                         if alien["health"] <= 0 and alien in flight_aliens:
                             flight_aliens.remove(alien)
-                        break
-
-                if alien["pos"].x < -50 and alien in flight_aliens:
-                    flight_aliens.remove(alien)
-
-            for bullet in flight_bullets[:]:
-                bullet["pos"] += bullet["vel"] * dt
-                bullet["life"] -= dt
-
-                if bullet["life"] <= 0:
-                    flight_bullets.remove(bullet)
-
-            flight_damage_timer = max(0, flight_damage_timer - dt)
-
-            draw_flight()
-
-            if ship_health <= 0:
-                phase = "lost"
-                message = "SPACESHIP DESTROYED!"
-            elif flight_progress >= 100:
-                phase = "won"
-                message = "MISSION COMPLETE!"
-
-        # ---------- END SCREENS ----------
-        elif phase in ("won", "lost"):
-            screen.fill(BLACK)
-
-            for sx, sy in stars:
-                pygame.draw.circle(screen, WHITE, (sx, sy), 2)
-
-            if phase == "won":
-                draw_earth(WIDTH // 2, 220, 110)
-                centered_text("MISSION COMPLETE!", 380, GREEN)
-                centered_text(
-                    "TREASURE DELIVERED TO EARTH", 435, YELLOW, FONT
-                )
-            else:
-                centered_text("MISSION FAILED", 235, RED)
-                centered_text(message, 300, WHITE, FONT)
-
-            centered_text("PRESS R TO PLAY AGAIN", 510, CYAN, FONT)
-            centered_text("PRESS ESC TO QUIT", 550, WHITE, SMALL)
-
-        pygame.display.flip()
-
-    pygame.quit()
-    sys.exit()
-
-
-if __name__ == "__main__":
-    main()

@@ -19,4 +19,4 @@ def run_level3(screen, clock):
         clock.tick(60)
 
     return "LEVEL_COMPLETE"
-print("hello")
+print("hello world")

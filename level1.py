@@ -1,11 +1,8 @@
 """
 LEVEL 1 - EARTH TO MOON   (pygame version of the Panda3D level)
-
 Requires:  pip install pygame        (pygame 2.0 or newer)
 Run alone: python levels/level1_pygame.py
-
 Same flow and features as the Panda3D level:
-
     menu (Start Game button) -> astronaut boards the ship -> countdown
     3, 2, 1, LAUNCH! -> takeoff -> flight (stars, Earth behind, Moon ahead,
     asteroids) -> approach to the Moon -> crash-landing on the Moon ->
@@ -194,11 +191,11 @@ def add_explosion(parts, x, y, r, big=False):
 #  Artwork (all drawn with pygame primitives)
 # ======================================================================
 def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0):
-    """Round capsule ship, side view, upright (engine at the bottom).
+    """Classic straight rocket ship, upright with nose at the top.
 
-    (ox, oy) = centre x and the bottom of the engine nozzle, s = pixels per
-    model unit. The door is on the left part of the window band.
-    flame: 0 = engine off, 1 = normal flame.  hatch: 0 = door open, 1 = closed.
+    (ox, oy) is the centre x and the bottom of the engine nozzle.
+    s is the pixels-per-model-unit scale. `hatch` is retained so existing
+    Level 1 boarding/launch logic continues to work.
     """
     def X(u):
         return ox + u * s
@@ -209,65 +206,55 @@ def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0):
     def poly(color, pts):
         pygame.draw.polygon(surf, color, [ip(X(u), Y(z)) for u, z in pts])
 
-    line_w = max(2, int(0.22 * s))
+    line_w = max(2, int(0.16 * s))
 
+    # Bright engine flame below the rocket.
     if flame > 0.0:
-        length = 4.2 * flame
-        poly((255, 120, 25), [(-0.65, -0.4), (0.65, -0.4),
+        length = 3.4 * flame
+        poly((255, 105, 25), [(-0.62, -0.4), (0.62, -0.4),
                               (0.0, -0.4 - length)])
-        poly((255, 235, 120), [(-0.38, -0.4), (0.38, -0.4),
-                               (0.0, -0.4 - length * 0.62)])
+        poly((255, 225, 80), [(-0.32, -0.4), (0.32, -0.4),
+                              (0.0, -0.4 - length * 0.68)])
 
-    for sx in (-1, 1):                                        # landing legs
-        pygame.draw.line(surf, METAL, ip(X(1.3 * sx), Y(2.7)),
-                         ip(X(2.74 * sx), Y(-0.38)), line_w)
-        foot = pygame.Rect(0, 0, max(3, int(0.9 * s)), max(2, int(0.16 * s)))
-        foot.center = ip(X(2.74 * sx), Y(-0.38))
-        pygame.draw.rect(surf, METAL, foot)
+    # Side fins and engine bell.
+    poly((190, 48, 55), [(-0.72, 1.35), (-1.75, -0.25),
+                         (-0.48, 0.05), (-0.35, 1.5)])
+    poly((190, 48, 55), [(0.72, 1.35), (1.75, -0.25),
+                         (0.48, 0.05), (0.35, 1.5)])
+    poly((55, 60, 78), [(-0.48, 0.45), (0.48, 0.45),
+                        (0.38, -0.4), (-0.38, -0.4)])
 
-    poly(HULL_COL, [(-0.45, 0.0), (0.45, 0.0), (1.4, 2.4), (-1.4, 2.4)])
-    poly((38, 38, 46), [(-0.6, -0.4), (0.6, -0.4), (0.45, 0.0), (-0.45, 0.0)])
+    # Long, straight rocket body with a pointed nose.
+    poly((205, 211, 222), [(-0.52, 1.0), (-0.52, 6.9),
+                           (0.0, 8.9), (0.52, 6.9), (0.52, 1.0)])
+    poly((135, 145, 164), [(-0.52, 1.0), (-0.52, 6.9),
+                           (0.0, 8.9), (0.0, 1.0)])
+    poly((240, 242, 248), [(-0.14, 1.2), (-0.14, 6.8),
+                           (0.0, 7.7), (0.0, 1.2)])
 
-    cx, cy = int(X(0)), int(Y(4.6))                           # round body
-    r = int(2.6 * s)
-    for i in range(6):
-        k = i / 5.0
-        pygame.draw.circle(surf, lerp_col(HULL_COL, HULL_LIGHT, k),
-                           (int(cx - 0.05 * i * r * 0.5), int(cy - 0.06 * i * r * 0.5)),
-                           max(1, int(r * (1.0 - 0.13 * i))))
-    rim = pygame.Rect(cx - r, cy - r, 2 * r, 2 * r)
-    pygame.draw.arc(surf, (255, 150, 90), rim, -0.9, 0.9, max(2, int(0.1 * s)))
+    # Dark cockpit window near the top.
+    window = pygame.Rect(int(X(-0.31)), int(Y(6.35)),
+                         max(3, int(0.62 * s)), max(3, int(1.05 * s)))
+    pygame.draw.ellipse(surf, (25, 75, 135), window)
+    pygame.draw.ellipse(surf, (115, 220, 255), window, max(1, int(0.08 * s)))
+    pygame.draw.line(surf, (220, 248, 255),
+                     ip(X(-0.16), Y(6.95)), ip(X(0.02), Y(6.55)),
+                     max(1, int(0.07 * s)))
 
-    band = pygame.Rect(int(X(-2.62)), int(Y(5.3)), int(5.24 * s), int(1.4 * s))
-    pygame.draw.rect(surf, GLASS, band)                       # window band
-    pygame.draw.line(surf, (200, 215, 245), ip(X(-2.5), Y(4.62)),
-                     ip(X(2.5), Y(4.62)), max(1, int(0.07 * s)))
-    pygame.draw.line(surf, (255, 140, 60), ip(X(-2.5), Y(4.45)),
-                     ip(X(2.5), Y(4.45)), max(1, int(0.07 * s)))
-    for u in (-0.9, 0.5, 1.8):                                # window frames
-        pygame.draw.line(surf, METAL, ip(X(u), Y(5.3)), ip(X(u), Y(3.9)),
-                         max(2, int(0.12 * s)))
-    for z in (3.88, 5.28):                                    # white trim rings
-        pygame.draw.line(surf, TRIM, ip(X(-2.66), Y(z)), ip(X(2.66), Y(z)),
-                         max(2, int(0.09 * s)))
+    # Thin body bands and small side details.
+    pygame.draw.line(surf, (245, 155, 55), ip(X(-0.5), Y(2.2)),
+                     ip(X(0.5), Y(2.2)), max(2, int(0.12 * s)))
+    pygame.draw.line(surf, (245, 155, 55), ip(X(-0.5), Y(2.45)),
+                     ip(X(0.5), Y(2.45)), max(1, int(0.06 * s)))
+    for z in (3.0, 4.2):
+        pygame.draw.circle(surf, (80, 190, 220),
+                           ip(X(-0.36), Y(z)), max(1, int(0.09 * s)))
+        pygame.draw.circle(surf, (80, 190, 220),
+                           ip(X(0.36), Y(z)), max(1, int(0.09 * s)))
 
-    door = pygame.Rect(int(X(-2.25)), int(Y(5.2)), max(2, int(1.0 * s)),
-                       max(2, int(1.3 * s)))
-    pygame.draw.rect(surf, (245, 226, 150), door)             # lit doorway
-    cover_w = int(door.width * clamp(hatch, 0.0, 1.0))
-    if cover_w > 0:
-        cover = pygame.Rect(door.right - cover_w, door.top, cover_w, door.height)
-        pygame.draw.rect(surf, METAL, cover)
-    pygame.draw.rect(surf, (60, 64, 76), door, 1)
-
-    badge = pygame.Rect(int(X(0.3)), int(Y(3.25)), max(2, int(1.6 * s)),
-                        max(2, int(0.4 * s)))
-    pygame.draw.rect(surf, (165, 76, 204), badge, border_radius=3)
-    pygame.draw.circle(surf, (225, 190, 245),
-                       (badge.left + badge.height // 2 + 1, badge.centery),
-                       max(1, badge.height // 3))
-    poly(METAL, [(-0.4, 7.1), (0.4, 7.1), (0.22, 7.55), (-0.22, 7.55)])
-
+    # Small top panel detail.
+    pygame.draw.line(surf, (255, 255, 255), ip(X(-0.2), Y(7.7)),
+                     ip(X(0.2), Y(7.7)), max(1, int(0.07 * s)))
 
 def draw_astronaut(surf, x, y, sc=0.68, phase=0.0, face=1):
     """Astronaut in a white suit with a gold visor. (x, y) = feet. face = +1/-1."""

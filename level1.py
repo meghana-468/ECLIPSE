@@ -404,7 +404,7 @@ def make_stars(n):
 
 # Boarding path: along the pad, up the ramp, into the doorway.
 _DOOR_BOTTOM_Y = GROUND_Y - 4.3 * LAUNCH_SCALE
-_HULL_EDGE_X = LAUNCH_SHIP_X - 2.62 * LAUNCH_SCALE
+_HULL_EDGE_X = LAUNCH_SHIP_X - 0.64 * LAUNCH_SCALE  # ramp reaches the rocket's left side
 ASTRO_PATH = [(90.0, float(GROUND_Y)), (170.0, float(GROUND_Y)),
               (_HULL_EDGE_X, _DOOR_BOTTOM_Y),
               (_HULL_EDGE_X + 31.0, _DOOR_BOTTOM_Y)]
@@ -553,7 +553,7 @@ class Level1:
         self.stars = make_stars(190)
         self.parts = Particles()
 
-        self.start_btn = Button((W // 2 - 125, 178, 250, 56), "START GAME")
+        self.start_btn = Button((W // 2 - 140, 214, 280, 58), "START MISSION")
         self.launch_btn = Button((W // 2 - 140, 178, 280, 56), "LAUNCH ROCKET")
         self.pause_btn = Button((W - 126, 14, 108, 38), "PAUSE")
         self.resume_btn = Button((W // 2 - 140, 300, 280, 52), "RESUME")
@@ -1040,15 +1040,23 @@ class Level1:
     def _draw_ui(self, c, mouse):
         st = self.state
         if st == "menu":
-            panel = pygame.Surface((640, 215))
-            panel.fill((6, 14, 36))
-            panel.set_alpha(190)
-            c.blit(panel, (W // 2 - 320, 30))
-            draw_text(c, "MISSION: MOON", self.f_big, GOLD, (W // 2, 78))
-            draw_text(c, "Level 1 - Earth to Moon", self.f_med, WHITE, (W // 2, 134))
+            # Title overlay: keeps the existing launch-pad scene underneath.
+            panel = pygame.Surface((760, 300), pygame.SRCALPHA)
+            pygame.draw.rect(panel, (5, 12, 32, 225), panel.get_rect(), border_radius=24)
+            pygame.draw.rect(panel, (70, 220, 255, 210), panel.get_rect(), 2, border_radius=24)
+            c.blit(panel, (W // 2 - 380, 24))
+
+            # A subtle pulse gives the title life without needing external assets.
+            pulse = 1.0 + 0.025 * math.sin(self.t * 2.2)
+            draw_text_scaled(c, "ECLIPSE", self.f_big, CYAN, (W // 2, 82), pulse)
+            draw_text(c, "MISSION MARS", self.f_med, GOLD, (W // 2, 137))
+            draw_text(c, "ONE MISSION. AN UNKNOWN DESTINATION.", self.f_small,
+                      WHITE, (W // 2, 174))
             self.start_btn.draw(c, self.f_btn, mouse)
-            draw_text(c, "ENTER = start   |   Board the ship, then press SPACE to launch",
-                      self.f_small, WHITE, (W // 2, H - 22))
+            draw_text(c, "LEVEL 1  |  EARTH LAUNCH", self.f_small, WHITE,
+                      (W // 2, 292))
+            draw_text(c, "Click START MISSION or press ENTER",
+                      self.f_small, WHITE, (W // 2, H - 24))
             return
 
         self._draw_hud(c, mouse)
@@ -1151,7 +1159,7 @@ class Level1:
 def main():
     pygame.init()
     screen = pygame.display.set_mode((W, H))
-    pygame.display.set_caption("Level 1 - Earth to Moon")
+    pygame.display.set_caption("ECLIPSE: Mission Mars | Level 1")
 
     def level_done():
         print("Level 1 complete - the main game would start Level 2 now.")

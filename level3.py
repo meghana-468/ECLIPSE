@@ -1,28 +1,37 @@
-import pygame
-import random
+
+
 import math
-import sys
-import time
-import math
+
 import random
+
 import sys
+
 import pygame
+
+
 # Reused Level 1 artwork: the rocket and the astronaut.
 def ip(x, y):
     return (int(x), int(y))
+
+
 def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0, pilot=False):
     """Classic straight rocket ship, upright with nose at the top.
+
     (ox, oy) is the centre x and the bottom of the engine nozzle.
     s is the pixels-per-model-unit scale. `hatch` is retained so existing
     Level 1 boarding/launch logic continues to work.
     """
     def X(u):
         return ox + u * s
+
     def Y(z):
         return oy - (z + 0.4) * s
+
     def poly(color, pts):
         pygame.draw.polygon(surf, color, [ip(X(u), Y(z)) for u, z in pts])
+
     line_w = max(2, int(0.16 * s))
+
     # Bright engine flame below the rocket.
     if flame > 0.0:
         length = 3.4 * flame
@@ -30,6 +39,7 @@ def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0, pilot=False):
                               (0.0, -0.4 - length)])
         poly((255, 225, 80), [(-0.32, -0.4), (0.32, -0.4),
                               (0.0, -0.4 - length * 0.68)])
+
     # Side fins and engine bell.
     poly((190, 48, 55), [(-0.72, 1.35), (-1.75, -0.25),
                          (-0.48, 0.05), (-0.35, 1.5)])
@@ -37,6 +47,7 @@ def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0, pilot=False):
                          (0.48, 0.05), (0.35, 1.5)])
     poly((55, 60, 78), [(-0.48, 0.45), (0.48, 0.45),
                         (0.38, -0.4), (-0.38, -0.4)])
+
     # Long, straight rocket body with a pointed nose.
     poly((205, 211, 222), [(-0.52, 1.0), (-0.52, 6.9),
                            (0.0, 8.9), (0.52, 6.9), (0.52, 1.0)])
@@ -44,6 +55,7 @@ def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0, pilot=False):
                            (0.0, 8.9), (0.0, 1.0)])
     poly((240, 242, 248), [(-0.14, 1.2), (-0.14, 6.8),
                            (0.0, 7.7), (0.0, 1.2)])
+
     # Cockpit window. Once the astronaut has boarded, show their helmet and
     # shoulders INSIDE the glass (rather than standing beside the rocket).
     window = pygame.Rect(int(X(-0.31)), int(Y(6.35)),
@@ -66,6 +78,7 @@ def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0, pilot=False):
     pygame.draw.line(surf, (220, 248, 255),
                      ip(X(-0.16), Y(6.95)), ip(X(0.02), Y(6.55)),
                      max(1, int(0.07 * s)))
+
     # Thin body bands and small side details.
     pygame.draw.line(surf, (245, 155, 55), ip(X(-0.5), Y(2.2)),
                      ip(X(0.5), Y(2.2)), max(2, int(0.12 * s)))
@@ -76,9 +89,11 @@ def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0, pilot=False):
                            ip(X(-0.36), Y(z)), max(1, int(0.09 * s)))
         pygame.draw.circle(surf, (80, 190, 220),
                            ip(X(0.36), Y(z)), max(1, int(0.09 * s)))
+
     # Small top panel detail.
     pygame.draw.line(surf, (255, 255, 255), ip(X(-0.2), Y(7.7)),
                      ip(X(0.2), Y(7.7)), max(1, int(0.07 * s)))
+
 def draw_astronaut(surf, x, y, sc=0.68, phase=0.0, face=1):
     """Astronaut in a white suit with a gold visor. (x, y) = feet. face = +1/-1."""
     suit = (238, 238, 245)
@@ -86,8 +101,10 @@ def draw_astronaut(surf, x, y, sc=0.68, phase=0.0, face=1):
     dark = (70, 66, 64)
     gold = (236, 184, 60)
     swing = math.sin(phase)
+
     def P(dx, dy):
         return (int(x + face * dx * sc), int(y + dy * sc))
+
     def limb(origin, angle_deg, length, width, color, tip):
         a = math.radians(angle_deg)
         ox, oy = origin
@@ -96,6 +113,7 @@ def draw_astronaut(surf, x, y, sc=0.68, phase=0.0, face=1):
         pygame.draw.line(surf, color, P(ox, oy), P(ex, ey), w)
         pygame.draw.circle(surf, color, P(ox, oy), max(1, w // 2))
         pygame.draw.circle(surf, tip, P(ex, ey), max(2, int(width * 0.55 * sc)))
+
     pack = pygame.Rect(0, 0, max(3, int(11 * sc)), max(3, int(22 * sc)))
     pack.center = P(-13, -40)
     pygame.draw.rect(surf, (212, 214, 224), pack, border_radius=3)
@@ -114,11 +132,18 @@ def draw_astronaut(surf, x, y, sc=0.68, phase=0.0, face=1):
     pygame.draw.ellipse(surf, gold, visor)
     pygame.draw.circle(surf, (255, 240, 200), P(7, -60), max(1, int(2 * sc)))
     limb((0, -46), -swing * 30, 19, 7, suit, dark)
+
+
+
+
+
 # ECLIPSE - LEVEL 3: MARS MYSTERY
 # Standalone Level 3. Uses the original astronaut and spaceship artwork above.
+
 class MarsAdventure:
     WIDTH = 1100
     HEIGHT = 700
+
     def __init__(self, screen, on_complete=None, on_exit=None):
         self.screen = screen
         self.on_complete = on_complete
@@ -129,7 +154,7 @@ class MarsAdventure:
         self.font_large = pygame.font.Font(None, 58)
         self.font_title = pygame.font.Font(None, 40)
         self.running = True
-        self.state = "flight"
+        self.state = "briefing"
         self.paused = False
         self.reset_mission()
         self.stars = [
@@ -144,6 +169,7 @@ class MarsAdventure:
             (0, 490), (150, 445), (260, 485), (420, 435), (570, 488),
             (740, 442), (890, 485), (1010, 440), (1100, 475)
         ]
+
     def reset_mission(self):
         self.player_x = 70.0
         self.player_y = 590.0
@@ -169,28 +195,31 @@ class MarsAdventure:
             pygame.Rect(575, 500, 18, 118),
             pygame.Rect(790, 500, 18, 118),
         ]
+        # Start with a Moon-to-Mars space journey, then enter the Mars mission.
         self.state = "launch"
         self.paused = False
-        # Continuous Moon launch -> interactive cruise -> cinematic Mars landing.
+        self.phase_time = 0.0
         self.flight_time = 0.0
         self.flight_duration = 22.0
-        self.phase_time = 0.0
-        self.ship_x = self.WIDTH // 2
-        self.ship_y = 500.0
+        self.ship_x = 155.0
+        self.ship_y = 515.0
         self.flight_lives = 3
         self.flight_invulnerable = 0.0
         self.flight_message = "ENGINES IGNITING — MOON TO MARS"
         self.flight_asteroids = []
-        self.next_asteroid = 1.8
+        self.next_asteroid = 1.3
         self.shield_active = False
-        self.flight_stars = [(random.randrange(self.WIDTH), random.randrange(self.HEIGHT), random.choice((1, 1, 2))) for _ in range(100)]
-        # Mars obstacles are futuristic energy barriers, not piles of rocks.
-        self.energy_barriers = [pygame.Rect(295, 500, 24, 118), pygame.Rect(690, 500, 24, 118)]
+        self.flight_stars = [
+            (random.randrange(self.WIDTH), random.randrange(self.HEIGHT), random.choice((1, 1, 2)))
+            for _ in range(110)
+        ]
+
     def _text(self, text, y, font=None, color=(240, 245, 255), x=None):
         font = font or self.font_medium
         surf = font.render(text, True, color)
         rect = surf.get_rect(center=(self.WIDTH // 2 if x is None else x, y))
         self.screen.blit(surf, rect)
+
     def _button(self, rect, label, primary=True):
         fill = (0, 92, 190) if primary else (15, 28, 48)
         edge = (100, 225, 255) if primary else (100, 160, 190)
@@ -198,11 +227,14 @@ class MarsAdventure:
         pygame.draw.rect(self.screen, edge, rect, 2, border_radius=9)
         label_surface = self.font_small.render(label, True, (245, 250, 255))
         self.screen.blit(label_surface, label_surface.get_rect(center=rect.center))
+
     def _near(self, x, distance=65):
         return abs(self.player_x - x) <= distance
+
     def _say(self, message, duration=2.5):
         self.message = message
         self.message_timer = duration
+
     def _hit_laser(self):
         if self.invulnerable > 0:
             return
@@ -212,21 +244,29 @@ class MarsAdventure:
         self._say("LASER HIT! You lost a life. Wait for the beam to switch off.", 2.3)
         if self.lives <= 0:
             self.state = "game_over"
+
     def handle_event(self, event):
         if event.type == pygame.QUIT:
             self.running = False
             if self.on_exit:
                 self.on_exit()
             return
+
         if event.type == pygame.KEYDOWN:
             if self.state == "flight_over" and event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 self.reset_mission()
-                self.state = "launch"
-            elif self.state == "flight_over" and event.key == pygame.K_ESCAPE:
+                return
+            if self.state in ("launch", "flight", "landing") and event.key == pygame.K_ESCAPE:
                 self.running = False
                 if self.on_exit:
                     self.on_exit()
-            elif self.state == "briefing" and event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                return
+            if self.state == "flight_over" and event.key == pygame.K_ESCAPE:
+                self.running = False
+                if self.on_exit:
+                    self.on_exit()
+                return
+            if self.state == "briefing" and event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 self.state = "playing"
                 self._say("Mission started! Find all three diamonds.", 2.5)
             elif self.state == "playing":
@@ -244,7 +284,8 @@ class MarsAdventure:
                     self.on_complete()
             elif self.state == "game_over" and event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 self.reset_mission()
-                self.state = "launch"
+                self.state = "playing"
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.state == "briefing" and pygame.Rect(385, 555, 330, 55).collidepoint(event.pos):
                 self.state = "playing"
@@ -261,11 +302,12 @@ class MarsAdventure:
             elif self.state == "game_over":
                 if pygame.Rect(385, 490, 330, 54).collidepoint(event.pos):
                     self.reset_mission()
-                    self.state = "launch"
+                    self.state = "playing"
                 elif pygame.Rect(565, 555, 235, 54).collidepoint(event.pos):
                     self.running = False
                     if self.on_exit:
                         self.on_exit()
+
     def _interact(self):
         if self.stage == "door" and self._near(875, 95):
             self.door_open = True
@@ -283,6 +325,7 @@ class MarsAdventure:
             self._say("Move close to the golden key and press E to pick it up.", 2.5)
         elif self.stage == "escape":
             self._say("Carry the key to your spaceship on the right.", 2.5)
+
     def update(self, dt):
         if self.state in ("launch", "flight", "landing"):
             self.update_flight(dt)
@@ -293,6 +336,7 @@ class MarsAdventure:
         self.invulnerable = max(0.0, self.invulnerable - dt)
         self.message_timer = max(0.0, self.message_timer - dt)
         self.console_flash += dt
+
         keys = pygame.key.get_pressed()
         dx = int(keys[pygame.K_RIGHT] or keys[pygame.K_d]) - int(keys[pygame.K_LEFT] or keys[pygame.K_a])
         dy = int(keys[pygame.K_DOWN] or keys[pygame.K_s]) - int(keys[pygame.K_UP] or keys[pygame.K_w])
@@ -304,7 +348,9 @@ class MarsAdventure:
             self.facing = 1 if dx > 0 else -1
         if dx or dy:
             self.walk_phase += dt * 8
+
         player_rect = pygame.Rect(int(self.player_x - 14), int(self.player_y - 58), 28, 58)
+
         if self.stage == "diamonds":
             for i, diamond in enumerate(self.diamonds):
                 if diamond is not None and player_rect.colliderect(diamond):
@@ -314,13 +360,7 @@ class MarsAdventure:
             if self.diamonds_found == 3:
                 self.stage = "door"
                 self._say("All diamonds collected! Find the giant door and press E.", 4.0)
-        # Futuristic energy barriers add challenge without cluttering Mars with rocks.
-        if self.stage in ("diamonds", "door"):
-            for barrier in self.energy_barriers:
-                active = (self.laser_phase % 3.6) < 2.0
-                if active and player_rect.colliderect(barrier):
-                    self._hit_laser()
-                    break
+
         # Lasers cycle on and off. The player can wait for a safe opening.
         laser_on = (self.laser_phase % 2.8) < 1.65
         if laser_on and self.stage in ("diamonds", "door"):
@@ -328,100 +368,145 @@ class MarsAdventure:
                 if player_rect.colliderect(laser):
                     self._hit_laser()
                     break
+
         if self.stage == "escape" and self.has_key and self.player_x >= 1010:
             self.state = "success"
+
     def update_flight(self, dt):
+        """Launch from the Moon, travel diagonally toward Mars, then land."""
         self.phase_time += dt
         self.flight_invulnerable = max(0.0, self.flight_invulnerable - dt)
         keys = pygame.key.get_pressed()
+
         if self.state == "launch":
-            # Keep the original upright rocket art. It rises from the Moon before control begins.
-            self.ship_y = 505 - min(1.0, self.phase_time / 4.0) * 115
-            if self.phase_time >= 4.0:
+            progress = min(1.0, self.phase_time / 3.2)
+            self.ship_x = 150 + progress * 70
+            self.ship_y = 520 - progress * 48
+            if self.phase_time >= 3.2:
                 self.state = "flight"
                 self.phase_time = 0.0
-                self.flight_message = "CRUISE: steer around asteroids; hold SPACE for shield."
+                self.flight_time = 0.0
+                self.ship_x, self.ship_y = 220.0, 470.0
+                self.flight_message = "FLIGHT: steer around asteroids; hold SPACE for shield."
             return
+
         if self.state == "landing":
-            self.ship_y = 360 + min(1.0, self.phase_time / 4.0) * 190
+            progress = min(1.0, self.phase_time / 4.0)
+            self.ship_x = 900 + progress * 45
+            self.ship_y = 145 + progress * 280
             if self.phase_time >= 4.0:
                 self.state = "briefing"
                 self.phase_time = 0.0
                 self._say("Landed on Mars! Exit the ship and collect all 3 diamonds.", 4.0)
             return
+
         self.flight_time += dt
-        speed = 285 * dt
-        self.ship_x += (int(keys[pygame.K_RIGHT] or keys[pygame.K_d]) - int(keys[pygame.K_LEFT] or keys[pygame.K_a])) * speed
-        self.ship_y += (int(keys[pygame.K_DOWN] or keys[pygame.K_s]) - int(keys[pygame.K_UP] or keys[pygame.K_w])) * speed
-        self.ship_x = max(65, min(self.WIDTH - 65, self.ship_x))
-        self.ship_y = max(235, min(self.HEIGHT - 125, self.ship_y))
-        self.shield_active = keys[pygame.K_SPACE]
+        # The automatic diagonal route leads from bottom-left to top-right.
+        # WASD / arrows still let the player dodge and adjust the path.
+        dx = int(keys[pygame.K_RIGHT] or keys[pygame.K_d]) - int(keys[pygame.K_LEFT] or keys[pygame.K_a])
+        dy = int(keys[pygame.K_DOWN] or keys[pygame.K_s]) - int(keys[pygame.K_UP] or keys[pygame.K_w])
+        self.ship_x += (35 + dx * 170) * dt
+        self.ship_y += (-17 + dy * 170) * dt
+        self.ship_x = max(90, min(self.WIDTH - 65, self.ship_x))
+        self.ship_y = max(65, min(self.HEIGHT - 80, self.ship_y))
+        self.shield_active = bool(keys[pygame.K_SPACE])
+
+        # Asteroids spawn beside Mars (upper-right) and fly toward the ship.
         self.next_asteroid -= dt
         if self.next_asteroid <= 0:
-            self.flight_asteroids.append([random.randrange(35, self.WIDTH - 35), -35, random.randrange(135, 225), random.randrange(15, 24)])
-            self.next_asteroid = random.uniform(1.0, 1.7)
+            ax = random.uniform(900, 1060)
+            ay = random.uniform(65, 190)
+            vx0 = self.ship_x - ax
+            vy0 = self.ship_y - ay
+            distance = max(1.0, math.hypot(vx0, vy0))
+            speed = random.uniform(135, 225)
+            self.flight_asteroids.append([
+                ax, ay, vx0 / distance * speed, vy0 / distance * speed,
+                random.randrange(15, 24)
+            ])
+            self.next_asteroid = random.uniform(0.8, 1.5)
+
         for rock in self.flight_asteroids[:]:
-            rock[1] += rock[2] * dt
-            if rock[1] > self.HEIGHT + 40:
+            rock[0] += rock[2] * dt
+            rock[1] += rock[3] * dt
+            if (rock[0] < -45 or rock[0] > self.WIDTH + 45 or
+                    rock[1] < -45 or rock[1] > self.HEIGHT + 45):
                 self.flight_asteroids.remove(rock)
                 continue
-            if self.flight_invulnerable <= 0 and math.hypot(rock[0] - self.ship_x, rock[1] - self.ship_y) < rock[3] + 25:
+            radius = rock[4]
+            if (self.flight_invulnerable <= 0 and
+                    math.hypot(rock[0] - self.ship_x, rock[1] - self.ship_y) < radius + 25):
                 self.flight_asteroids.remove(rock)
                 if self.shield_active:
                     self.flight_message = "SHIELD BLOCKED THE ASTEROID!"
                 else:
                     self.flight_lives -= 1
                     self.flight_invulnerable = 1.2
-                    self.flight_message = "ASTEROID IMPACT — steer away or hold SPACE!"
+                    self.flight_message = "ASTEROID IMPACT — HOLD SPACE TO SHIELD!"
                     if self.flight_lives <= 0:
                         self.state = "flight_over"
                         return
+
         if self.flight_time >= self.flight_duration:
             self.state = "landing"
             self.phase_time = 0.0
             self.flight_message = "MARS APPROACH — LANDING THRUSTERS ENGAGED"
 
     def draw_flight(self):
-        self.screen.fill((5, 8, 28))
-        for x, y, r in self.flight_stars:
-            yy = int((y + (self.flight_time + self.phase_time) * 35) % self.HEIGHT)
-            pygame.draw.circle(self.screen, (155, 185, 230), (x, yy), r)
+        self.screen.fill((4, 7, 25))
+        for x, y, radius in self.flight_stars:
+            yy = int((y + (self.flight_time + self.phase_time) * 30) % self.HEIGHT)
+            pygame.draw.circle(self.screen, (150, 180, 225), (x, yy), radius)
+
         if self.state == "launch":
-            # Lunar horizon and the same rocket artwork used throughout Eclipse.
-            pygame.draw.circle(self.screen, (155, 160, 178), (95, 510), 185)
-            pygame.draw.circle(self.screen, (105, 112, 135), (50, 470), 25)
-            pygame.draw.circle(self.screen, (105, 112, 135), (145, 545), 35)
-            self._text("ECLIPSE: LUNAR LAUNCH", 45, self.font_title, (140, 225, 255))
-            draw_ship(self.screen, int(self.ship_x), int(self.ship_y + 60), 16, flame=1.0, pilot=True)
-            self._text("Engines igniting... leaving the Moon", 645, self.font_medium, (255, 220, 150))
+            # Show the Moon only during launch, with the rocket starting on its surface.
+            moon_center = (125, 650)
+            pygame.draw.circle(self.screen, (150, 158, 176), moon_center, 155)
+            pygame.draw.circle(self.screen, (190, 195, 207), (88, 600), 18)
+            pygame.draw.circle(self.screen, (112, 120, 140), (175, 625), 24)
+            pygame.draw.circle(self.screen, (112, 120, 140), (115, 690), 15)
+            pygame.draw.circle(self.screen, (125, 132, 151), (205, 710), 12)
+            self._text("ECLIPSE: LUNAR LAUNCH", 42, self.font_title, (140, 225, 255))
+            draw_ship(self.screen, int(self.ship_x), int(self.ship_y + 48), 10, flame=1.0, pilot=True)
+            self._text("Launching from the Moon to Mars...", 650, self.font_medium, (255, 220, 150))
             return
+
         if self.state == "landing":
             progress = min(1.0, self.phase_time / 4.0)
-            mars_radius = int(95 + progress * 260)
-            pygame.draw.circle(self.screen, (180, 68, 48), (550, 530), mars_radius)
-            pygame.draw.circle(self.screen, (125, 48, 43), (490, 500), max(10, int(mars_radius * .22)))
-            pygame.draw.circle(self.screen, (125, 48, 43), (620, 565), max(12, int(mars_radius * .28)))
-            draw_ship(self.screen, int(self.ship_x), int(self.ship_y + 55), 16, flame=max(.15, 1.0-progress*.7), pilot=True)
-            self._text("MARS APPROACH", 45, self.font_title, (255, 175, 130))
-            self._text("Slowing down... landing thrusters engaged", 645, self.font_medium, (255, 220, 150))
+            radius = int(75 + progress * 280)
+            pygame.draw.circle(self.screen, (180, 68, 48), (1000, 125), radius)
+            pygame.draw.circle(self.screen, (125, 48, 43), (960, 100), max(12, int(radius * .22)))
+            pygame.draw.circle(self.screen, (125, 48, 43), (1030, 165), max(14, int(radius * .28)))
+            draw_ship(self.screen, int(self.ship_x), int(self.ship_y + 48), 10,
+                      flame=max(0.15, 1.0 - progress * .7), pilot=True)
+            self._text("MARS APPROACH", 42, self.font_title, (255, 175, 130))
+            self._text("Landing thrusters engaged...", 650, self.font_medium, (255, 220, 150))
             return
-        pygame.draw.circle(self.screen, (155, 160, 178), (65, 110), 42)
-        pygame.draw.circle(self.screen, (180, 68, 48), (1030, 125), 65)
-        pygame.draw.circle(self.screen, (125, 48, 43), (1010, 105), 18)
-        pygame.draw.circle(self.screen, (125, 48, 43), (1045, 145), 22)
-        self._text("MOON  →  MARS: SPACE FLIGHT", 35, self.font_title, (140, 225, 255))
-        progress = min(1.0, self.flight_time / self.flight_duration)
-        pygame.draw.rect(self.screen, (35, 48, 72), (300, 65, 500, 16), border_radius=7)
-        pygame.draw.rect(self.screen, (70, 225, 255), (300, 65, int(500 * progress), 16), border_radius=7)
+
+        # Keep the space-flight view clear; Mars is drawn only in the landing scene.
+        for i in range(1, 24):
+            t = i / 24
+            pygame.draw.circle(self.screen, (70, 105, 150),
+                               (int(205 + t * 720), int(500 - t * 330)), 2)
+
         for rock in self.flight_asteroids:
-            pygame.draw.circle(self.screen, (115, 113, 124), (int(rock[0]), int(rock[1])), rock[3])
-            pygame.draw.circle(self.screen, (70, 72, 86), (int(rock[0]-5), int(rock[1]-5)), max(3, rock[3]//3))
+            radius = rock[4]
+            pygame.draw.circle(self.screen, (115, 113, 124), (int(rock[0]), int(rock[1])), radius)
+            pygame.draw.circle(self.screen, (70, 72, 86),
+                               (int(rock[0] - 5), int(rock[1] - 5)), max(3, radius // 3))
+
         if self.flight_invulnerable <= 0 or int(self.flight_invulnerable * 12) % 2 == 0:
-            draw_ship(self.screen, int(self.ship_x), int(self.ship_y + 48), 10, flame=.8, pilot=True)
+            draw_ship(self.screen, int(self.ship_x), int(self.ship_y + 48), 10, flame=0.8, pilot=True)
         if self.shield_active:
-            pygame.draw.circle(self.screen, (90, 235, 255), (int(self.ship_x), int(self.ship_y)), 52, 3)
-        self._text(f"SHIP HULL: {self.flight_lives}", 135, self.font_medium, (255, 225, 150))
-        self._text("Move: WASD / Arrow Keys     Hold SPACE: activate shield", 620, self.font_small)
+            pygame.draw.circle(self.screen, (90, 235, 255),
+                               (int(self.ship_x), int(self.ship_y)), 47, 3)
+
+        self._text("MOON  →  MARS: DIAGONAL SPACE FLIGHT", 35, self.font_title, (140, 225, 255))
+        progress = min(1.0, self.flight_time / self.flight_duration)
+        pygame.draw.rect(self.screen, (35, 48, 72), (330, 62, 440, 13), border_radius=6)
+        pygame.draw.rect(self.screen, (70, 225, 255), (330, 62, int(440 * progress), 13), border_radius=6)
+        self._text(f"SHIP HULL: {self.flight_lives}", 120, self.font_medium, (255, 225, 150))
+        self._text("Move: WASD / Arrow Keys     Hold SPACE: shield", 625, self.font_small)
         self._text(self.flight_message, 660, self.font_small, (255, 220, 175))
 
     def draw_background(self):
@@ -434,7 +519,8 @@ class MarsAdventure:
         pygame.draw.rect(self.screen, (187, 79, 51), (0, 475, 1100, 8))
         for x, y, w, h in [(100, 625, 50, 14), (320, 660, 65, 16), (720, 630, 48, 13), (930, 670, 80, 17)]:
             pygame.draw.ellipse(self.screen, (103, 40, 38), (x, y, w, h))
-        # Ancient Mars door with three diamond sockets.
+
+        # Giant alien door with three diamond sockets.
         door_rect = pygame.Rect(835, 425, 105, 155)
         door_color = (65, 95, 115) if not self.door_open else (24, 35, 48)
         pygame.draw.rect(self.screen, (35, 45, 62), door_rect.inflate(16, 12), border_radius=9)
@@ -448,6 +534,7 @@ class MarsAdventure:
             pygame.draw.rect(self.screen, (8, 15, 28), (849, 440, 77, 132), border_radius=5)
             pygame.draw.line(self.screen, (80, 245, 220), (850, 445), (850, 570), 3)
             pygame.draw.line(self.screen, (80, 245, 220), (925, 445), (925, 570), 3)
+
         # The golden key is revealed only after the diamond door opens.
         if self.door_open and not self.has_key:
             kx, ky = 888, 520
@@ -457,8 +544,10 @@ class MarsAdventure:
             pygame.draw.line(self.screen, (255, 213, 75), (kx, ky - 3), (kx + 18, ky + 15), 6)
             pygame.draw.line(self.screen, (255, 213, 75), (kx + 12, ky + 9), (kx + 6, ky + 15), 4)
             pygame.draw.line(self.screen, (255, 213, 75), (kx + 17, ky + 14), (kx + 11, ky + 20), 4)
+
         # Original spaceship artwork is reused at the exit.
         draw_ship(self.screen, 1040, 590, 12, flame=0.35 if self.stage == "escape" else 0.0, hatch=1.0, pilot=False)
+
     def draw_hud(self):
         pygame.draw.rect(self.screen, (15, 20, 35), (15, 14, 235, 70), border_radius=9)
         pygame.draw.rect(self.screen, (105, 150, 180), (15, 14, 235, 70), 2, border_radius=9)
@@ -473,17 +562,19 @@ class MarsAdventure:
         else:
             objective = "OBJECTIVE: TAKE THE KEY TO YOUR SHIP →"
         self._text(objective, 108, self.font_small, (255, 225, 160))
+
     def draw(self):
         if self.state in ("launch", "flight", "landing"):
             self.draw_flight()
             return
         if self.state == "flight_over":
-            self.screen.fill((5, 8, 25))
-            self._text("SHIP DISABLED", 230, self.font_large, (255, 90, 110))
-            self._text("The ship took too much damage. Try the Moon-to-Mars flight again.", 300, self.font_medium)
+            self.screen.fill((4, 7, 25))
+            self._text("SHIP DISABLED", 235, self.font_large, (255, 90, 110))
+            self._text("Asteroids damaged your ship. Try the Moon-to-Mars flight again.", 305, self.font_medium)
             self._text("Press ENTER to retry or ESC to quit", 380, self.font_medium, (180, 220, 255))
             return
         self.draw_background()
+
         if self.state == "briefing":
             overlay = pygame.Surface((1100, 700), pygame.SRCALPHA)
             overlay.fill((3, 6, 20, 225))
@@ -491,8 +582,8 @@ class MarsAdventure:
             self._text("ECLIPSE — LEVEL 3", 100, self.font_large, (255, 180, 120))
             self._text("MARS MYSTERY", 150, self.font_title, (255, 110, 90))
             instructions = [
-                "1. Collect all three glowing diamonds while timing the laser and energy gates.",
-                "2. Time your moves past red laser beams and futuristic energy barriers.",
+                "1. Move across Mars and collect all three glowing diamonds.",
+                "2. Red lasers turn on and off — wait until they switch off to cross.",
                 "3. At the giant door, press E to place the three diamonds.",
                 "4. Enter the opened chamber and press E near the big golden key.",
                 "5. Carry the key to your spaceship on the far right to finish Level 3.",
@@ -501,6 +592,7 @@ class MarsAdventure:
             for i, line in enumerate(instructions):
                 self._text(line, 230 + i * 43, self.font_small if i == 5 else self.font_medium)
             self._button(pygame.Rect(385, 555, 330, 55), "PRESS ENTER / CLICK TO START")
+
         elif self.state == "playing":
             laser_on = (self.laser_phase % 2.8) < 1.65
             for laser in self.lasers:
@@ -513,24 +605,19 @@ class MarsAdventure:
                     pygame.draw.circle(self.screen, (255, 220, 220), beam.center, 4)
                 else:
                     pygame.draw.circle(self.screen, (80, 255, 170), (laser.centerx, 508), 5)
-            # Futuristic energy barriers cycle on and off between the diamonds.
-            barrier_on = (self.laser_phase % 3.6) < 2.0
-            for barrier in self.energy_barriers:
-                pygame.draw.rect(self.screen, (45, 65, 90), barrier.inflate(10, 0), border_radius=5)
-                color = (80, 220, 255) if barrier_on else (65, 90, 115)
-                pygame.draw.rect(self.screen, color, barrier, border_radius=5)
-                if barrier_on:
-                    pygame.draw.line(self.screen, (200, 250, 255), (barrier.centerx, barrier.top), (barrier.centerx, barrier.bottom), 3)
+
             for diamond in self.diamonds:
                 if diamond is not None:
                     pygame.draw.polygon(self.screen, (55, 255, 225), [(diamond.centerx, diamond.top), (diamond.right, diamond.centery), (diamond.centerx, diamond.bottom), (diamond.left, diamond.centery)])
                     pygame.draw.polygon(self.screen, (220, 255, 250), [(diamond.centerx, diamond.top + 5), (diamond.centerx + 5, diamond.centery), (diamond.centerx, diamond.bottom - 5), (diamond.centerx - 5, diamond.centery)])
+
             # Flash briefly after a laser hit, while preserving the original character design.
             if self.invulnerable <= 0 or int(self.invulnerable * 12) % 2 == 0:
                 draw_astronaut(self.screen, int(self.player_x), int(self.player_y), sc=0.9, phase=self.walk_phase, face=self.facing)
             if self.has_key:
                 pygame.draw.circle(self.screen, (255, 210, 75), (int(self.player_x + 20), int(self.player_y - 42)), 6, 3)
                 pygame.draw.line(self.screen, (255, 210, 75), (int(self.player_x + 20), int(self.player_y - 36)), (int(self.player_x + 30), int(self.player_y - 28)), 3)
+
             self.draw_hud()
             if self.message_timer > 0:
                 self._text(self.message, 143, self.font_small, (255, 235, 150))
@@ -540,6 +627,7 @@ class MarsAdventure:
                 self._text("PRESS E TO PICK UP THE BIG KEY", 180, self.font_small, (255, 220, 90))
             if self.paused:
                 self._text("PAUSED — PRESS P TO RESUME", 350, self.font_large, (255, 225, 140))
+
         elif self.state == "success":
             overlay = pygame.Surface((1100, 700), pygame.SRCALPHA)
             overlay.fill((2, 8, 20, 238))
@@ -550,6 +638,7 @@ class MarsAdventure:
             self._text("The treasure vault remains locked... until Level 4.", 355, self.font_medium, (180, 220, 255))
             self._button(pygame.Rect(300, 490, 245, 54), "NEXT LEVEL")
             self._button(pygame.Rect(565, 490, 235, 54), "QUIT", False)
+
         elif self.state == "game_over":
             overlay = pygame.Surface((1100, 700), pygame.SRCALPHA)
             overlay.fill((3, 5, 15, 235))
@@ -558,6 +647,7 @@ class MarsAdventure:
             self._text("You ran out of lives. Try timing the laser beams carefully.", 290, self.font_medium)
             self._button(pygame.Rect(385, 490, 330, 54), "TRY AGAIN")
             self._button(pygame.Rect(565, 555, 235, 54), "QUIT", False)
+
     def run(self):
         while self.running:
             dt = min(self.clock.tick(60) / 1000.0, 0.04)
@@ -566,18 +656,25 @@ class MarsAdventure:
             self.update(dt)
             self.draw()
             pygame.display.flip()
+
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((MarsAdventure.WIDTH, MarsAdventure.HEIGHT))
     pygame.display.set_caption("ECLIPSE - Level 3: Mars Mystery")
+
     game = None
+
     def finish_game():
         if game is not None:
             game.running = False
+
     # This file runs Level 3 only; it does not import or recreate Level 2 or Level 4.
     game = MarsAdventure(screen, on_complete=finish_game, on_exit=finish_game)
     game.run()
     pygame.quit()
     sys.exit()
+
+
 if __name__ == "__main__":
     main()

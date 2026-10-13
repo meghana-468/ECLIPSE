@@ -1,4 +1,10 @@
 import pygame
+"""ECLIPSE — LEVEL 4: THE RED LAKE
+Standalone final level only. The previous level's first key is carried in.
+Requires pygame: pip install pygame
+Run: python ECLIPSE_level4.py
+"""
+import math
 import random
 import math
 import sys
@@ -540,39 +546,3 @@ def main():
                         flight_bullets.remove(bullet)
                         if alien["hp"] <= 0 and alien in flight_aliens:
                             flight_aliens.remove(alien)
-                        break
-
-                if alien["pos"].x < -40 and alien in flight_aliens:
-                    flight_aliens.remove(alien)
-
-            for bullet in flight_bullets[:]:
-                bullet["pos"] += bullet["vel"]*dt
-                bullet["life"] -= dt
-                p = bullet["pos"]
-                if (bullet["life"] <= 0 or p.x < -50 or p.x > W+50
-                        or p.y < -50 or p.y > H+50):
-                    if bullet in flight_bullets:
-                        flight_bullets.remove(bullet)
-
-            flight_damage = max(0, flight_damage-dt)
-
-            if wave == 3 and not flight_aliens:
-                flight_progress += 24*dt
-
-            draw_flight(elapsed)
-
-            if ship_hp <= 0:
-                phase = "lost"
-            elif wave == 3 and not flight_aliens and flight_progress >= 100:
-                phase = "landing"
-                landing_time = 0
-
-        # ============== EARTH LANDING ==============
-        elif phase == "landing":
-            landing_time += dt
-            screen.fill((3, 8, 30))
-
-            for sx, sy, r in STARS:
-                pygame.draw.circle(screen, WHITE, (sx, sy), r)
-
-            radius = min(175

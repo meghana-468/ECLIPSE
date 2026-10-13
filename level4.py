@@ -8,7 +8,6 @@ import random
 import sys
 import pygame
 
-<<<<<<< HEAD
 pygame.init()
 
 # ================= SETTINGS =================
@@ -650,7 +649,6 @@ def main():
 
                         if alien["health"] <= 0 and alien in flight_aliens:
                             flight_aliens.remove(alien)
-=======
 # Reused Level 1 artwork: the rocket and the astronaut.
 def ip(x, y):
     return (int(x), int(y))
@@ -1235,4 +1233,3 @@ def main():
 
 if __name__ == '__main__':
     main()
->>>>>>> 7635531 (level4_changes)

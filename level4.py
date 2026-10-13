@@ -8,16 +8,12 @@ import random
 import sys
 import pygame
 
-pygame.init()
+pygame.font.init()
 
 # ================= SETTINGS =================
 WIDTH, HEIGHT = 1000, 650
 WORLD_W, WORLD_H = 2200, 1800
 FPS = 60
-
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Space Jet Adventure")
-clock = pygame.time.Clock()
 
 FONT = pygame.font.SysFont("consolas", 22)
 SMALL = pygame.font.SysFont("consolas", 16)

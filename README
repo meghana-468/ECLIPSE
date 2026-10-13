@@ -1,0 +1,15 @@
+ECLIPSE four-level integration patch
+
+Files in this ZIP replace/add only:
+- main.py: sequence controller for Level 1 -> Level 2 -> Level 3 -> Level 4
+- level2.py: removes the old placeholder Level 3 hook; Continue returns to main.py
+- level4.py: prevents display creation as a side effect of importing Level 4
+
+Use with the other existing project files in the same folder:
+level1.py, level3.py, entities.py, puzzle.py, settings.py, ui.py.
+
+Run from the project root:
+    python main.py
+
+Keep a backup or commit your current work before replacing files.
+

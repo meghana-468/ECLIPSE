@@ -721,6 +721,35 @@ def draw_ship(surf, ox, oy, s, flame=0.0, hatch=1.0, pilot=False):
     # Small top panel detail.
     pygame.draw.line(surf, (255, 255, 255), ip(X(-0.2), Y(7.7)),
                      ip(X(0.2), Y(7.7)), max(1, int(0.07 * s)))
+
+
+def draw_horizontal_ship(surf, cx, cy, scale, flame=0.0, hatch=1.0, pilot=False):
+    """Draw the existing rocket rotated sideways, with its nose pointing right.
+
+    The transparent canvas is large enough for the rocket and engine flame,
+    preventing the artwork from being cropped during rotation.
+    """
+    canvas_w = max(8, int(6.0 * scale))
+    canvas_h = max(16, int(14.0 * scale))
+    ship_canvas = pygame.Surface((canvas_w, canvas_h), pygame.SRCALPHA)
+
+    # draw_ship's oy is the bottom of the engine nozzle; leave room for flame.
+    draw_ship(
+        ship_canvas,
+        canvas_w // 2,
+        int(10.0 * scale),
+        scale,
+        flame=flame,
+        hatch=hatch,
+        pilot=pilot,
+    )
+
+    # An upright rocket points up; -90 degrees makes its nose point right.
+    rotated = pygame.transform.rotate(ship_canvas, -90)
+    ship_rect = rotated.get_rect(center=(int(cx), int(cy)))
+    surf.blit(rotated, ship_rect)
+
+
 def draw_astronaut(surf, x, y, sc=0.68, phase=0.0, face=1):
     """Astronaut in a white suit with a gold visor. (x, y) = feet. face = +1/-1."""
     suit = (238, 238, 245)
@@ -793,6 +822,12 @@ class FinalAdventure:
         self.message_timer = 4.0
         self.elapsed = 0.0
         self.landing_timer = 0.0
+        self.landing_x = self.WIDTH / 2
+        self.landing_asteroids = []
+        self.landing_spawn_timer = 0.0
+        self.landing_invulnerable = 0.0
+        self.landing_hits = 0
+        self.landing_status_timer = 0.0
         self.shot_flash = 0.0
         self.jump_timer = 0.0
         self.jump_from = 0
@@ -952,10 +987,62 @@ class FinalAdventure:
         self.invulnerable = max(0.0, self.invulnerable - dt)
         self.shot_flash = max(0.0, self.shot_flash - dt)
 
-        # Play the Earth approach and touchdown animation before the victory screen.
+        # Interactive Earth-return sequence: steer around asteroids, then land.
         if self.state == 'landing':
+            keys = pygame.key.get_pressed()
             self.landing_timer += dt
-            if self.landing_timer >= 5.5:
+            self.landing_invulnerable = max(0.0, self.landing_invulnerable - dt)
+            self.landing_status_timer = max(0.0, self.landing_status_timer - dt)
+
+            # The astronaut can steer during the asteroid field.
+            steer = int(keys[pygame.K_RIGHT] or keys[pygame.K_d]) - int(
+                keys[pygame.K_LEFT] or keys[pygame.K_a]
+            )
+            self.landing_x += steer * 330 * dt
+            self.landing_x = max(100, min(self.WIDTH - 100, self.landing_x))
+
+            # Asteroids cross the flight path until the final descent begins.
+            self.landing_spawn_timer -= dt
+            if self.landing_timer < 5.8 and self.landing_spawn_timer <= 0:
+                radius = random.randint(17, 31)
+                self.landing_asteroids.append({
+                    'x': float(random.randint(45, self.WIDTH - 45)),
+                    'y': float(random.randint(-100, -35)),
+                    'r': radius,
+                    'vx': random.choice((-1, 1)) * random.uniform(35, 115),
+                    'vy': random.uniform(220, 340),
+                    'spin': random.uniform(0, math.tau),
+                })
+                self.landing_spawn_timer = random.uniform(0.42, 0.72)
+
+            # Move rocks and detect collisions with the ship. A hit causes a
+            # short recovery window, but never traps the player in the sequence.
+            landing_progress = max(0.0, min((self.landing_timer - 0.2) / 7.3, 1.0))
+            eased_landing = 1.0 - (1.0 - landing_progress) * (1.0 - landing_progress)
+            landing_ground_y = int(self.HEIGHT + 100 - max(
+                0.0, min((self.landing_timer - 4.0) / 2.0, 1.0)) * 145)
+            landing_ground_y = min(self.HEIGHT - 75, landing_ground_y)
+            ship_bottom = -300 + (landing_ground_y - 5 + 300) * eased_landing
+            ship_center_y = ship_bottom - 112
+            for rock in self.landing_asteroids[:]:
+                rock['x'] += rock['vx'] * dt
+                rock['y'] += rock['vy'] * dt
+                rock['spin'] += dt * 1.8
+                if rock['x'] < 20 or rock['x'] > self.WIDTH - 20:
+                    rock['vx'] *= -1
+                if rock['y'] > self.HEIGHT + 60:
+                    self.landing_asteroids.remove(rock)
+                    continue
+                if (self.landing_timer < 5.8 and self.landing_invulnerable <= 0
+                        and math.hypot(rock['x'] - self.landing_x,
+                                       rock['y'] - ship_center_y) < rock['r'] + 17):
+                    self.landing_asteroids.remove(rock)
+                    self.landing_hits += 1
+                    self.landing_invulnerable = 0.9
+                    self.landing_status_timer = 1.0
+
+            # Give the asteroid field time to clear, then descend to the pad.
+            if self.landing_timer >= 7.5:
                 self.state = 'success'
             return
 
@@ -1174,42 +1261,131 @@ class FinalAdventure:
         self._text(objectives.get(self.stage, ''), 128, self.font_small, (255, 225, 160))
 
     def draw_earth_landing(self):
-        # Cinematic return from Mars: Earth grows as the ship descends.
-        self.screen.fill((3, 7, 24))
-        for i, (sx, sy, radius) in enumerate(self.stars):
-            pygame.draw.circle(self.screen, (175, 205, 255), (sx, sy), radius)
+        """Earth-return landing, paced like the Level 1 Moon descent."""
+        self.screen.fill((3, 5, 18))
 
-        progress = min(self.landing_timer / 4.5, 1.0)
-        earth_radius = int(70 + progress * 210)
-        earth_x = self.WIDTH // 2
-        earth_y = int(self.HEIGHT * 0.55 + progress * 105)
-        pygame.draw.circle(self.screen, (35, 105, 215), (earth_x, earth_y), earth_radius)
-        # Simple land shapes and atmosphere glow.
-        pygame.draw.ellipse(self.screen, (65, 180, 105),
-                            (earth_x - earth_radius // 2, earth_y - earth_radius // 3,
-                             max(2, earth_radius), max(2, earth_radius // 2)))
-        pygame.draw.ellipse(self.screen, (45, 150, 95),
-                            (earth_x + earth_radius // 6, earth_y,
-                             max(2, earth_radius // 2), max(2, earth_radius // 3)))
-        pygame.draw.circle(self.screen, (100, 220, 255), (earth_x, earth_y), earth_radius, 4)
+        # Space backdrop and distant stars.
+        for sx, sy, radius in self.stars:
+            pygame.draw.circle(self.screen, (165, 195, 245), (sx, sy), radius)
 
-        # Landing platform at the bottom of the scene.
-        platform_y = self.HEIGHT - 65
-        pygame.draw.rect(self.screen, (43, 55, 76),
-                         (self.WIDTH // 2 - 230, platform_y, 460, 26), border_radius=8)
-        pygame.draw.line(self.screen, (90, 225, 255),
-                         (self.WIDTH // 2 - 230, platform_y),
-                         (self.WIDTH // 2 + 230, platform_y), 3)
+        t = self.landing_timer
+        approach = min(t / 4.8, 1.0)
+        descent = max(0.0, min((t - 0.2) / 7.3, 1.0))
+        cx = self.WIDTH // 2
+        earth_radius = int(55 + approach * 430)
+        earth_cy = int(HEIGHT + 190 - approach * 100)
 
-        ship_y = int(-90 + (self.HEIGHT - 220) * progress)
-        draw_ship(self.screen, self.WIDTH // 2, ship_y + 70, 9.0,
-                  flame=0.85 if progress < 1.0 else 0.0, hatch=1.0, pilot=True)
+        # Earth grows into view during the approach, just as the Moon does
+        # in Level 1. The blue atmosphere remains visible behind the surface.
+        pygame.draw.circle(self.screen, (22, 75, 165), (cx, earth_cy), earth_radius)
+        pygame.draw.ellipse(
+            self.screen, (53, 157, 91),
+            (cx - int(earth_radius * 0.63), earth_cy - int(earth_radius * 0.43),
+             max(2, int(earth_radius * 0.80)), max(2, int(earth_radius * 0.46)))
+        )
+        pygame.draw.ellipse(
+            self.screen, (39, 132, 82),
+            (cx + int(earth_radius * 0.04), earth_cy + int(earth_radius * 0.05),
+             max(2, int(earth_radius * 0.52)), max(2, int(earth_radius * 0.34)))
+        )
+        pygame.draw.circle(self.screen, (92, 205, 255), (cx, earth_cy), earth_radius, 4)
 
-        self._text('RETURNING FROM MARS TO EARTH', 42, self.font_large, (125, 220, 255))
-        if progress < 1.0:
-            self._text('Spaceship approaching Earth...', 85, self.font_small, (235, 240, 255))
+        # Re-entry streaks stop as the rocket reaches the landing zone.
+        if t < 5.2:
+            for i in range(12):
+                sx = (i * 127 + int(t * 240)) % self.WIDTH
+                sy = (i * 71 + int(t * 330)) % self.HEIGHT
+                pygame.draw.line(self.screen, (65, 100, 155),
+                                 (sx, sy), (sx - 11, sy + 25), 1)
+
+        # Keep the asteroid field active during the approach, then clear it
+        # before the final controlled descent.
+        for rock in self.landing_asteroids:
+            rx, ry, r = int(rock['x']), int(rock['y']), rock['r']
+            pygame.draw.circle(self.screen, (78, 76, 91), (rx, ry), r)
+            pygame.draw.circle(self.screen, (135, 130, 145),
+                               (rx - r // 3, ry - r // 4), max(3, r // 4))
+            pygame.draw.circle(self.screen, (42, 43, 57),
+                               (rx + r // 3, ry + r // 4), max(3, r // 5))
+
+        # A clear Earth ground/horizon comes up beneath the rocket.
+        ground_y = int(self.HEIGHT + 100 - max(0.0, min((t - 4.0) / 2.0, 1.0)) * 145)
+        ground_y = min(self.HEIGHT - 75, ground_y)
+        if t >= 4.0:
+            pygame.draw.rect(self.screen, (30, 78, 48),
+                             (0, ground_y, self.WIDTH, self.HEIGHT - ground_y))
+            pygame.draw.rect(self.screen, (80, 155, 78),
+                             (0, ground_y, self.WIDTH, 8))
+            # Distant green hills make the landing clearly take place on Earth.
+            pygame.draw.ellipse(self.screen, (43, 105, 62),
+                                (-120, ground_y - 48, 440, 100))
+            pygame.draw.ellipse(self.screen, (51, 122, 68),
+                                (280, ground_y - 58, 520, 115))
+            pygame.draw.ellipse(self.screen, (43, 105, 62),
+                                (730, ground_y - 42, 420, 90))
+
+        # Wide landing pad placed directly on the ground.
+        pad_y = ground_y - 3
+        if t >= 4.0:
+            pad = pygame.Rect(cx - 170, pad_y - 3, 340, 24)
+            pygame.draw.rect(self.screen, (28, 38, 56), pad, border_radius=6)
+            pygame.draw.rect(self.screen, (115, 145, 158), pad, 2, border_radius=6)
+            pygame.draw.line(self.screen, (85, 235, 255),
+                             (pad.left + 12, pad.top + 4),
+                             (pad.right - 12, pad.top + 4), 2)
+            for px in range(pad.left + 28, pad.right - 18, 48):
+                pygame.draw.line(self.screen, (220, 180, 85),
+                                 (px, pad.top + 12), (px + 18, pad.top + 12), 2)
+
+        # The rocket uses the same upright, bottom-anchored drawing and
+        # steady easing descent as Level 1's Moon landing.
+        ship_scale = 25.0
+        ship_x = int(self.landing_x)
+        start_bottom = -300.0
+        target_bottom = float(pad_y - 2)
+        eased = 1.0 - (1.0 - descent) * (1.0 - descent)
+        ship_bottom = int(start_bottom + (target_bottom - start_bottom) * eased)
+        landed = t >= 7.5
+        if landed:
+            ship_bottom = int(target_bottom)
+
+        flame = 1.0 if not landed else 0.0
+        draw_ship(self.screen, ship_x, ship_bottom, ship_scale,
+                  flame=flame * random.uniform(0.9, 1.15), hatch=1.0, pilot=True)
+
+        # Dust puffs spread along the pad after the rocket touches down.
+        if landed:
+            pulse = 8 + int(abs(math.sin(t * 5.0)) * 10)
+            pygame.draw.ellipse(self.screen, (155, 170, 155),
+                                (ship_x - 95 - pulse, pad_y - 7, 65 + pulse, 16))
+            pygame.draw.ellipse(self.screen, (155, 170, 155),
+                                (ship_x + 30, pad_y - 7, 65 + pulse, 16))
+
+        if t < 0.8:
+            headline = 'LEAVING MARS — EARTH RETURN'
+            subline = 'Returning to Earth...'
+        elif t < 4.0:
+            headline = 'EARTH APPROACH'
+            subline = 'Steer with A / D or LEFT / RIGHT to avoid asteroids'
+        elif t < 7.5:
+            headline = 'FINAL DESCENT'
+            subline = 'Rocket descending toward the Earth landing ground'
         else:
-            self._text('TOUCHDOWN!', self.HEIGHT - 105, self.font_large, (120, 255, 175))
+            headline = 'TOUCHDOWN!'
+            subline = 'Rocket is fully landed upright on Earth ground'
+
+        self._text(headline, 36, self.font_large,
+                   (255, 190, 120) if t < 4.0 else (125, 225, 255))
+        self._text(subline, 76, self.font_small, (240, 245, 255))
+
+        if self.landing_status_timer > 0:
+            self._text('ASTEROID IMPACT — STABILIZING!', 112, self.font_medium,
+                       (255, 125, 100))
+        self._text(f'ASTEROID HITS: {self.landing_hits}', self.HEIGHT - 38,
+                   self.font_small, (255, 220, 145))
+        if landed:
+            self._text('LANDING GEAR LOCKED — ROCKET ON GROUND',
+                       self.HEIGHT - 64, self.font_small, (120, 255, 180))
 
     def draw(self):
         if self.state == 'landing':

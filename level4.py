@@ -792,6 +792,7 @@ class FinalAdventure:
         self.message = 'The first key is secure. Move away from the spaceship.'
         self.message_timer = 4.0
         self.elapsed = 0.0
+        self.landing_timer = 0.0
         self.shot_flash = 0.0
         self.jump_timer = 0.0
         self.jump_from = 0
@@ -950,6 +951,14 @@ class FinalAdventure:
         self.message_timer = max(0.0, self.message_timer - dt)
         self.invulnerable = max(0.0, self.invulnerable - dt)
         self.shot_flash = max(0.0, self.shot_flash - dt)
+
+        # Play the Earth approach and touchdown animation before the victory screen.
+        if self.state == 'landing':
+            self.landing_timer += dt
+            if self.landing_timer >= 5.5:
+                self.state = 'success'
+            return
+
         if self.state != 'playing':
             return
         keys = pygame.key.get_pressed()
@@ -1015,8 +1024,9 @@ class FinalAdventure:
             self.player_x = min(self.player_x, self.DOOR_X - 150)
         elif self.stage == 'escape_run':
             if self.player_x <= self.SHIP_X + 75:
-                self.state = 'success'
-                self._say('The astronaut reaches the spaceship and returns safely to Earth.', 5.0)
+                self.state = 'landing'
+                self.landing_timer = 0.0
+                self._say('TREASURE SECURED! Launching from Mars and returning to Earth...', 5.0)
 
         self.camera_x = max(0.0, min(self.WORLD_END - self.WIDTH, self.player_x - self.WIDTH * 0.43))
 
@@ -1163,7 +1173,48 @@ class FinalAdventure:
         }
         self._text(objectives.get(self.stage, ''), 128, self.font_small, (255, 225, 160))
 
+    def draw_earth_landing(self):
+        # Cinematic return from Mars: Earth grows as the ship descends.
+        self.screen.fill((3, 7, 24))
+        for i, (sx, sy, radius) in enumerate(self.stars):
+            pygame.draw.circle(self.screen, (175, 205, 255), (sx, sy), radius)
+
+        progress = min(self.landing_timer / 4.5, 1.0)
+        earth_radius = int(70 + progress * 210)
+        earth_x = self.WIDTH // 2
+        earth_y = int(self.HEIGHT * 0.55 + progress * 105)
+        pygame.draw.circle(self.screen, (35, 105, 215), (earth_x, earth_y), earth_radius)
+        # Simple land shapes and atmosphere glow.
+        pygame.draw.ellipse(self.screen, (65, 180, 105),
+                            (earth_x - earth_radius // 2, earth_y - earth_radius // 3,
+                             max(2, earth_radius), max(2, earth_radius // 2)))
+        pygame.draw.ellipse(self.screen, (45, 150, 95),
+                            (earth_x + earth_radius // 6, earth_y,
+                             max(2, earth_radius // 2), max(2, earth_radius // 3)))
+        pygame.draw.circle(self.screen, (100, 220, 255), (earth_x, earth_y), earth_radius, 4)
+
+        # Landing platform at the bottom of the scene.
+        platform_y = self.HEIGHT - 65
+        pygame.draw.rect(self.screen, (43, 55, 76),
+                         (self.WIDTH // 2 - 230, platform_y, 460, 26), border_radius=8)
+        pygame.draw.line(self.screen, (90, 225, 255),
+                         (self.WIDTH // 2 - 230, platform_y),
+                         (self.WIDTH // 2 + 230, platform_y), 3)
+
+        ship_y = int(-90 + (self.HEIGHT - 220) * progress)
+        draw_ship(self.screen, self.WIDTH // 2, ship_y + 70, 9.0,
+                  flame=0.85 if progress < 1.0 else 0.0, hatch=1.0, pilot=True)
+
+        self._text('RETURNING FROM MARS TO EARTH', 42, self.font_large, (125, 220, 255))
+        if progress < 1.0:
+            self._text('Spaceship approaching Earth...', 85, self.font_small, (235, 240, 255))
+        else:
+            self._text('TOUCHDOWN!', self.HEIGHT - 105, self.font_large, (120, 255, 175))
+
     def draw(self):
+        if self.state == 'landing':
+            self.draw_earth_landing()
+            return
         self.draw_background()
         if self.state == 'briefing':
             overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)

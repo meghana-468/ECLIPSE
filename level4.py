@@ -1,3 +1,4 @@
+
 """ECLIPSE — LEVEL 4: THE RED LAKE
 Standalone final level only. The previous level's first key is carried in.
 Requires pygame: pip install pygame

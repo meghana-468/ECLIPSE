@@ -9,10 +9,6 @@ from ui import HUD, Button, TouchControls
 INTRO, PLAYING, PUZZLE, COMPLETE, GAME_OVER, PAUSED = "INTRO", "PLAYING", "PUZZLE", "COMPLETE", "GAME_OVER", "PAUSED"
 
 
-def start_level3():
-    """Placeholder: replace this with your Level 3 transition later."""
-    print("Level 3 hook called. Add your Level 3 scene here!")
-
 class Level2:
     def __init__(self):
         pygame.font.init()
@@ -102,7 +98,6 @@ class Level2:
             elif self.state==GAME_OVER and event.key==pygame.K_r:
                 self.reset(); self.state=PLAYING; self.state_time=0
             elif self.state==COMPLETE and event.key in (pygame.K_SPACE,pygame.K_RETURN):
-                start_level3()
                 self.exit_requested="continue"
             elif self.state==COMPLETE and event.key==pygame.K_ESCAPE:
                 self.exit_requested="quit"
@@ -114,7 +109,6 @@ class Level2:
                 self.reset(); self.state=PLAYING; self.state_time=0
             elif self.state==COMPLETE:
                 if self.continue_btn.hit(pos):
-                    start_level3()
                     self.exit_requested="continue"
                 elif self.quit_btn.hit(pos):
                     self.exit_requested="quit"

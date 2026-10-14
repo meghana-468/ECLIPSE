@@ -1,5 +1,5 @@
 """Central configuration for Level 2. Adjust these values to tune the game."""
-WHITE = (255, 255, 255)
+
 WIDTH, HEIGHT = 1100, 700                 # Window size
 FPS = 60                                  # Target frames per second
 GROUND_Y = 555                            # Top of the Moon surface
